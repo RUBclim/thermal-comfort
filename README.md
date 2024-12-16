@@ -24,3 +24,5 @@ On version 3.12 for example...
 ```bash
 tox -e py312
 ```
+
+The vectorized fortran version is on average 4.2x faster than the `pythermalcomfort` version. An individual function call is 54.4x times faster.

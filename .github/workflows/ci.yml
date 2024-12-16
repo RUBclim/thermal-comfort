@@ -17,9 +17,7 @@ jobs:
       uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
-    - name: install dependencies
-      run: |
-        python -m pip install --upgrade pip setuptools wheel
-        python -m pip install --upgrade tox
-    - name: run
+    - name: install tox
+      run: pip install --upgrade tox tox-uv
+    - name: run tests in tox
       run: tox -e py

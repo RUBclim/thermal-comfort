@@ -1,6 +1,6 @@
 [build-system]
-requires = ["setuptools>=61.2"]
-build-backend = "setuptools.build_meta"
+requires = ["scikit-build-core", "numpy", "charset-normalizer"]
+build-backend = "scikit_build_core.build"
 
 [project]
 name = "thermal-comfort"
@@ -29,8 +29,13 @@ classifiers = [
 Repository = "https://github.com/RUBclim/thermal-comfort"
 Issues = "https://github.com/RUBclim/thermal-comfort/issues"
 
+[tool.scikit-build]
+ninja.version = ">=1.10"
+cmake.version = ">=3.17.2"
+wheel.py-api = "cp37"
+
 [tool.coverage.report]
-fail_under = 1
+fail_under = 100
 
 [tool.coverage.run]
 parallel = true
