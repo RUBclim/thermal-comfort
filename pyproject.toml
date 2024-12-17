@@ -32,7 +32,7 @@ Issues = "https://github.com/RUBclim/thermal-comfort/issues"
 [tool.scikit-build]
 ninja.version = ">=1.10"
 cmake.version = ">=3.17.2"
-wheel.py-api = "cp37"
+wheel.py-api = "cp39"
 
 [tool.coverage.report]
 fail_under = 100

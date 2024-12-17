@@ -1,0 +1,50 @@
+name: wheels
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build_wheels:
+    name: Build wheels on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            py: "cp39*"
+          - os: windows-latest
+            py: "cp39*"
+          - os: macos-latest
+            name: macos-x86_64
+            macos_arch: "x86_64"
+            py: "cp39*"
+          - os: macos-latest
+            name: macos-arm64
+            macos_arch: "arm64"
+            py: "cp39*"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        if: runner.os == 'Linux'
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: aarch64
+
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v2.22.0
+        env:
+          CIBW_TEST_COMMAND: python -c "import thermal_comfort; print(thermal_comfort.es(3.14))"
+          CIBW_ARCHS_LINUX: "x86_64 aarch64"
+          CIBW_ARCHS_WINDOWS : "AMD64 x86 ARM64"
+          CIBW_ARCHS_MACOS: "${{ matrix.macos_arch }}"
+          CIBW_SKIP: "pp*"
+          CIBW_BUILD: "${{ matrix.py }}"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          path: ./wheelhouse/*.whl
