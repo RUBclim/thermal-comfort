@@ -54,7 +54,7 @@
 !~ OR A FAILURE OF THE PROGRAM TO OPERATE WITH ANY OTHER PROGRAMS), EVEN IF SUCH HOLDER OR OTHER PARTY HAS BEEN ADVISED
 !~ OF THE POSSIBILITY OF SUCH DAMAGES.
 
-module thermal_comfort_mod
+MODULE thermal_comfort_mod
    IMPLICIT NONE
 
    PRIVATE
@@ -70,6 +70,16 @@ module thermal_comfort_mod
    REAL(kind=8), PARAMETER :: evap = 2.42*10.**6.  !<
    REAL(kind=8), PARAMETER :: sigm = 5.67*10.**(-8.)  !< Stefan-Boltzmann-Const.
    REAL(kind=8), PARAMETER :: cair = 1.01*1000.      !<
+   ! https://www.decatur.de/javascript/dew/resources/its90formulas.pdf
+   REAL :: g(0:7) = (/ & !< coefficients for es ITS-90 scale
+           -2.8365744E3, &
+           -6.028076559E3, &
+           1.954263612E1, &
+           -2.737830188E-2, &
+           1.6261698E-5, &
+           7.0229056E-10, &
+           -1.8680009E-13, &
+           2.7150305/)
 !
 !   Internal variables:
 ! ----------------
@@ -91,7 +101,7 @@ module thermal_comfort_mod
    PUBLIC UTCI_approx_vectorized
    !~ TODO: they should likely be private
    PUBLIC es
-   PUBLIC es_vectorized
+   PUBLIC es_vectorized_wexler
 
 CONTAINS
 
@@ -111,15 +121,15 @@ CONTAINS
       !
       !  Input arguments:
       ! ----------------
-      REAL(kind=8), INTENT(IN) :: ta     !< Air temperature                 (°C)        REAL(kind=8)
-      REAL(kind=8), INTENT(IN) :: tmrt   !< Mean radiant temperature         (°C)        REAL(kind=8)
-      REAL(kind=8), INTENT(IN) :: v      !< Wind speed                         (m/s)        REAL(kind=8)
-      REAL(kind=8), INTENT(IN) :: vpa    !< Vapor pressure                 (hPa)        REAL(kind=8)
-      REAL(kind=8), INTENT(IN) :: p      !< Air pressure                  (hPa)   REAL(kind=8)
+      REAL(kind=8), INTENT(IN) :: ta     !< Air temperature           (°C)
+      REAL(kind=8), INTENT(IN) :: tmrt   !< Mean radiant temperature  (°C)
+      REAL(kind=8), INTENT(IN) :: v      !< Wind speed                (m/s)
+      REAL(kind=8), INTENT(IN) :: vpa    !< Vapor pressure            (hPa)
+      REAL(kind=8), INTENT(IN) :: p      !< Air pressure              (hPa)
       !
       !  Output arguments:
       ! ----------------
-      REAL(kind=8), INTENT(OUT) :: tx   !< PET                                 (°C)        REAL(kind=8)
+      REAL(kind=8), INTENT(OUT) :: tx   !< PET  (°C)
       !  former intent (out), disabled:
       !  - tsk        : Skin temperature              (°C)    real
       !  - tcl        : Clothing temperature          (°C)    real
@@ -157,6 +167,7 @@ CONTAINS
       fcl = 1.15
       pos = 1
       sex = 1
+      ! calculate vapor pressure from rh
 
       ! !-- call subfunctions
       CALL in_body(ere, erel, p, rtv, ta, vpa)
@@ -786,24 +797,14 @@ CONTAINS
    DOUBLE precision function es(ta)
 !~ **********************************************
 !~ calculates saturation vapour pressure over water in hPa for input air temperature (ta) in celsius according to:
-!~ Hardy, R.; ITS-90 Formulations for Vapor Pressure, Frostpoint Temperature, Dewpoint Temperature and Enhancement Factors in the Range -100 to 100 �C;
+!~ Hardy, R.; ITS-90 Formulations for Vapor Pressure, Frostpoint Temperature, Dewpoint Temperature and Enhancement Factors in the Range -100 to 100 °C;
 !~ Proceedings of Third International Symposium on Humidity and Moisture; edited by National Physical Laboratory (NPL), London, 1998, pp. 214-221
 !~ http://www.thunderscientific.com/tech_info/reflibrary/its90formulas.pdf (retrieved 2008-10-01)
 
       implicit none
 !
       DOUBLE precision ta, tk
-      INTEGER I
-      REAL :: g(0:7) = (/ &
-              -2.8365744E3, &
-              -6.028076559E3, &
-              1.954263612E1, &
-              -2.737830188E-2, &
-              1.6261698E-5, &
-              7.0229056E-10, &
-              -1.8680009E-13, &
-              2.7150305/)
-!
+      INTEGER i
       tk = ta + 273.15 ! air temp in K
       es = g(7)*log(tk)
       do i = 0, 6
@@ -814,17 +815,21 @@ CONTAINS
       return
    END
 
-   function es_vectorized(array) result(new_array)
-      ! Subroutine to add 10 to every element in the array
-      implicit none
-      real(kind=8), intent(in) :: array(:)  ! Assumes a 1D array of any size
-      real(kind=8) :: new_array(size(array))
-      integer :: i
+   FUNCTION es_vectorized_wexler(ta) result(es_out)
+      IMPLICIT NONE
 
-      do i = 1, size(array)
-         new_array(i) = 6.112*exp((17.67*array(i))/(array(i) + 243.5))
+      real(kind=8), intent(in) :: ta(:)  ! Assumes a 1D array of any size
+      real(kind=8) :: es_out(size(ta))
+      real(kind=8) :: tk(size(ta))
+      INTEGER :: i
+      !calculate saturation vapor pressure
+      tk = ta + 273.15
+      es_out = g(7)*log(tk)
+      do i = 0, 6
+         es_out = es_out + g(i)*tk**(i - 2)
       end do
-   end function es_vectorized
+      es_out = exp(es_out)*0.01 ! *0.01: convert Pa to hPa
+   END FUNCTION es_vectorized_wexler
 
    function UTCI_approx_vectorized(Ta, Tmrt, va, rh) result(result_array)
       !~ **********************************************
@@ -846,7 +851,9 @@ CONTAINS
       ! DOUBLE PRECISION Ta,va,Tmrt,ehPa,Pa,D_Tmrt,rh;
       D_TMRT = Tmrt - Ta
       !     !~ calculate vapour pressure from relative humidity
-      PA = (rh*es_vectorized(Ta))/1000.0  !~ use vapour pressure in kPa
+      ! TODO: this is a significant slow down - we could inline a simpler version for
+      ! calculating es
+      PA = (rh*es_vectorized_wexler(Ta))/1000.0  !~ use vapour pressure in kPa
       !     !~ calculate 6th order polynomial as approximation
       result_array = Ta + &
                      (6.07562052D-01) + &
@@ -1061,4 +1068,4 @@ CONTAINS
                      (1.48348065D-03)*Pa*Pa*Pa*Pa*Pa*Pa
    END
 
-end module thermal_comfort_mod
+END MODULE thermal_comfort_mod
