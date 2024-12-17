@@ -56,9 +56,510 @@
 !~ OF THE POSSIBILITY OF SUCH DAMAGES.
 
 module thermal_comfort_mod
-    implicit none
+    IMPLICIT NONE
 
-  contains
+    PRIVATE
+!
+!   Internal constants:
+! ----------------
+    REAL(kind=8), PARAMETER :: po   = 1013.25   !< air pressure at sea level (hPa)
+    REAL(kind=8), PARAMETER :: rob  =    1.06   !<
+    REAL(kind=8), PARAMETER :: cb   = 3.64 * 1000.  !<
+    REAL(kind=8), PARAMETER :: food =    0.         !< heat gain by food        (W)
+    REAL(kind=8), PARAMETER :: emsk =    0.99   !< longwave emission coef. of skin
+    REAL(kind=8), PARAMETER :: emcl =    0.95   !< longwave emission coef. of cloth
+    REAL(kind=8), PARAMETER :: evap = 2.42 * 10. ** 6.  !<
+    REAL(kind=8), PARAMETER :: sigm = 5.67 * 10. **(-8.)  !< Stefan-Boltzmann-Const.
+    REAL(kind=8), PARAMETER :: cair = 1.01 * 1000.      !<
+!
+!   Internal variables:
+! ----------------
+    REAL(kind=8) :: h           !< internal heat        (W)
+
+!   MEMI configuration
+    REAL(kind=8) :: age         !< persons age          (a)
+    REAL(kind=8) :: mbody       !< persons body mass    (kg)
+    REAL(kind=8) :: ht          !< persons height       (m)
+    REAL(kind=8) :: work        !< work load            (W)
+    REAL(kind=8) :: eta         !< work efficiency      (dimensionless)
+    REAL(kind=8) :: icl         !< clothing insulation index (clo)
+    REAL(kind=8) :: fcl         !< surface area modification by clothing (factor)
+    INTEGER :: pos     !< posture: 1 = standing, 2 = sitting
+    INTEGER :: sex     !< sex: 1 = male, 2 = female
+
+    PUBLIC calculate_pet_static
+    PUBLIC UTCI_approx
+    PUBLIC UTCI_approx_vectorized
+    !~ TODO: they should likely be private
+    PUBLIC es
+    PUBLIC es_vectorized
+
+  CONTAINS
+
+!------------------------------------------------------------------------------!
+!
+! Description:
+! ------------
+!> Physiologically Equivalent Temperature (PET),
+!  stationary (calculated based on MEMI),
+!  Subroutine based on PETBER vers. 1.5.1996 by P. Hoeppe
+!------------------------------------------------------------------------------!
+  SUBROUTINE calculate_pet_static( ta, vpa, v, tmrt, p, tx )
+    !-- Configure sample person (optional)
+    !  age, mbody, ht, work, eta, icl, fcl, pos, sex )
+
+       IMPLICIT NONE
+    !
+    !  Input arguments:
+    ! ----------------
+       REAL(kind=8), INTENT( IN ) :: ta     !< Air temperature 		(°C)	REAL(kind=8)
+       REAL(kind=8), INTENT( IN ) :: tmrt   !< Mean radiant temperature 	(°C)	REAL(kind=8)
+       REAL(kind=8), INTENT( IN ) :: v      !< Wind speed 			(m/s)	REAL(kind=8)
+       REAL(kind=8), INTENT( IN ) :: vpa    !< Vapor pressure 		(hPa)	REAL(kind=8)
+       REAL(kind=8), INTENT( IN ) :: p      !< Air pressure                  (hPa)   REAL(kind=8)
+    !
+    !  Output arguments:
+    ! ----------------
+       REAL(kind=8), INTENT ( OUT ) :: tx   !< PET 				(°C)	REAL(kind=8)
+    !  former intent (out), disabled:
+       !  - tsk        : Skin temperature              (°C)    real
+       !  - tcl        : Clothing temperature          (°C)    real
+       !  - ws         :                                       real
+       !  - wetsk      : Fraction of wet skin                  real
+
+    !
+    !  Internal variables:
+    ! ----------------
+       REAL(kind=8) :: acl, adu, aeff, ere, erel, esw, facl, feff, rdcl,      &
+              rdsk, rtv, vpts, tsk, tcl, wetsk
+    !
+    !  Optional arguments not supported, removed
+    !  REAL(kind=8), INTENT ( in ), optional :: age, mbody, ht, work, eta, icl, fcl
+    !  INTEGER, INTENT ( in ), optional :: pos, sex
+
+    !--      Person data
+    !   IF ( .NOT. present( age ) )   age   = 35.
+    !   IF ( .NOT. present( mbody ) ) mbody = 75.
+    !   IF ( .NOT. present( ht ) )    ht    =  1.75
+    !   IF ( .NOT. present( work ) )  work  = 80.
+    !   IF ( .NOT. present( eta ) )   eta   =  0.
+    !   IF ( .NOT. present( icl ) )   icl   =  0.9
+    !   IF ( .NOT. present( fcl ) )   fcl   =  1.15
+    !   IF ( .NOT. present( pos ) )   pos   =  1
+    !   IF ( .NOT. present( sex ) )   sex   =  1
+
+    !   MEMI configuration
+        age   = 35.
+        mbody = 75.
+        ht    =  1.75
+        work  = 80.
+        eta   =  0.
+        icl   =  0.9
+        fcl   =  1.15
+        pos   =  1
+        sex   =  1
+
+
+    ! !-- call subfunctions
+       CALL in_body ( ere, erel, p, rtv, ta, vpa )
+
+       CALL heat_exch ( acl, adu, aeff, ere, erel, esw, facl, feff,       &
+                p, rdcl, rdsk, ta, tcl, tmrt, tsk, v, vpa, vpts, wetsk )
+
+       CALL pet_iteration ( acl, adu, aeff, esw, facl, feff, p, rdcl,     &
+                rdsk, rtv, ta, tcl, tsk, tx, vpts, wetsk )
+
+
+    END SUBROUTINE calculate_pet_static
+
+!------------------------------------------------------------------------------!
+! Description:
+! ------------
+!> Calculate internal energy ballance
+!------------------------------------------------------------------------------!
+    SUBROUTINE in_body ( ere, erel, p, rtv, ta, vpa )
+      !
+      !  Input arguments:
+      ! ----------------
+         REAL(kind=8), INTENT( IN )  :: p         !< air pressure     (hPa)
+         REAL(kind=8), INTENT( IN )  :: ta        !< air temperature  (°C)
+         REAL(kind=8), INTENT( IN )  :: vpa       !< vapor pressure   (hPa)
+      !
+      !  Output arguments:
+      ! ----------------
+         REAL(kind=8), INTENT( OUT ) :: ere       !< energy ballance          (W)
+         REAL(kind=8), INTENT( OUT ) :: erel      !< latent energy ballance   (W)
+         REAL(kind=8), INTENT( OUT ) :: rtv       !<
+      !
+      !  Internal variables:
+      ! ----------------
+         REAL(kind=8) :: eres, met, tex, vpex
+
+         met = 3.45 * mbody ** ( 3. / 4. ) * (1. + 0.004 *                           &
+               ( 30. - age) + 0.010 * ( ( ht * 100. /                                &
+               ( mbody ** ( 1. / 3. ) ) ) - 43.4 ) )
+      !    IF ( sex .EQ. 2 ) THEN
+      !      met = 3.19 * mbody ** ( 3. / 4. ) * ( 1. + 0.004 *                        &
+      !            ( 30. - age ) + 0.018 * ( ( ht * 100. / ( mbody **                  &
+      !            ( 1. / 3. ) ) ) - 42.1 ) )
+      !   END IF
+         met = work + met
+
+         h = met * (1. - eta)
+
+      !-- SENSIBLE RESPIRATION ENERGY
+
+         tex  = 0.47 * ta + 21.0
+         rtv  = 1.44 * 10. ** (-6.) * met
+         eres = cair * (ta - tex) * rtv
+
+      !-- LATENT RESPIRATION ENERGY
+
+         vpex = 6.11 * 10. ** ( 7.45 * tex / ( 235. + tex ) )
+         erel = 0.623 * evap / p * ( vpa - vpex ) * rtv
+
+      !-- SUM OF RESULTS
+
+         ere = eres + erel
+
+         RETURN
+       END SUBROUTINE in_body
+
+
+      !------------------------------------------------------------------------------!
+      ! Description:
+      ! ------------
+      !> Calculate heat gain or loss
+      !------------------------------------------------------------------------------!
+       SUBROUTINE heat_exch ( acl, adu, aeff, ere, erel, esw, facl, feff,   &
+              p, rdcl, rdsk, ta, tcl, tmrt, tsk, v, vpa, vpts, wetsk )
+
+      !
+      !  Input arguments:
+      ! ----------------
+         REAL(kind=8), INTENT( IN )  :: ere       !< energy ballance          (W)
+         REAL(kind=8), INTENT( IN )  :: erel      !< latent energy ballance   (W)
+         REAL(kind=8), INTENT( IN )  :: p         !< air pressure             (hPa)
+         REAL(kind=8), INTENT( IN )  :: ta        !< air temperature          (°C)
+         REAL(kind=8), INTENT( IN )  :: tmrt      !< mean radiant temperature (°C)
+         REAL(kind=8), INTENT( IN )  :: v         !< Wind speed               (m/s)
+         REAL(kind=8), INTENT( IN )  :: vpa       !< vapor pressure           (hPa)
+      !
+      !  Output arguments:
+      ! ----------------
+         REAL(kind=8), INTENT( OUT ) :: acl       !< clothing surface area        (m²)
+         REAL(kind=8), INTENT( OUT ) :: adu       !< Du-Bois area                 (m²)
+         REAL(kind=8), INTENT( OUT ) :: aeff      !< effective surface area       (m²)
+         REAL(kind=8), INTENT( OUT ) :: esw       !< energy-loss through sweat evap. (W)
+         REAL(kind=8), INTENT( OUT ) :: facl      !< surface area extension through clothing (factor)
+         REAL(kind=8), INTENT( OUT ) :: feff      !< surface modification by posture (factor)
+         REAL(kind=8), INTENT( OUT ) :: rdcl      !<
+         REAL(kind=8), INTENT( OUT ) :: rdsk      !<
+         REAL(kind=8), INTENT( OUT ) :: tcl       !< clothing temperature         (°C)
+         REAL(kind=8), INTENT( OUT ) :: tsk       !< skin temperature             (°C)
+         REAL(kind=8), INTENT( OUT ) :: vpts      !<
+         REAL(kind=8), INTENT( OUT ) :: wetsk     !< fraction of wet skin (dimensionless)
+
+
+         REAL(kind=8) :: c(0:10), cbare, cclo, csum, di, ed, enbal, enbal2, eswdif,      &
+              eswphy, eswpot, fec, hc, he, htcl, r1, r2, rbare, rcl, rclo, rclo2,    &
+              rsum, sw, swf, swm, tbody, tcore(1:7), vb, vb1, vb2, wd, wr, ws, wsum, &
+              xx, y
+
+         INTEGER :: count1, count3, j
+         logical :: skipIncreaseCount
+
+         wetsk = 0.
+         adu = 0.203 * mbody ** 0.425 * ht ** 0.725
+
+         hc = 2.67 + ( 6.5 * v ** 0.67)
+         hc   = hc * (p /po) ** 0.55
+         feff = 0.725                     !< Posture: 0.725 for stading
+         IF ( pos .EQ. 2 ) feff = 0.696   !<          0.696 for sitting
+         facl = (- 2.36 + 173.51 * icl - 100.76 * icl * icl + 19.28                  &
+               * (icl ** 3.)) / 100.
+
+         IF ( facl .GT. 1. )   facl = 1.
+         rcl = ( icl / 6.45) / facl
+         IF ( icl .GE. 2. )  y  = 1.
+
+         IF ( ( icl .GT. 0.6 ) .AND. ( icl .LT. 2. ) )  y = ( ht - 0.2 ) / ht
+         IF ( ( icl .LE. 0.6 ) .AND. ( icl .GT. 0.3 ) ) y = 0.5
+         IF ( ( icl .LE. 0.3 ) .AND. ( icl .GT. 0. ) )  y = 0.1
+
+         r2   = adu * (fcl - 1. + facl) / (2. * 3.14 * ht * y)
+         r1   = facl * adu / (2. * 3.14 * ht * y)
+
+         di   = r2 - r1
+
+      !-- SKIN TEMPERATURE
+
+         DO j = 1,7
+
+           tsk    = 34.
+           count1 = 0
+           tcl    = ( ta + tmrt + tsk ) / 3.
+           count3 = 1
+           enbal2 = 0.
+
+           DO
+             acl   = adu * facl + adu * ( fcl - 1. )
+             rclo2 = emcl * sigm * ( ( tcl + 273.2 )**4. -                           &
+               ( tmrt + 273.2 )** 4. ) * feff
+             htcl  = 6.28 * ht * y * di / ( rcl * LOG( r2 / r1 ) * acl )
+             tsk   = 1. / htcl * ( hc * ( tcl - ta ) + rclo2 ) + tcl
+
+      !--    RADIATION SALDO
+
+             aeff  = adu * feff
+             rbare = aeff * ( 1. - facl ) * emsk * sigm *                            &
+               ( ( tmrt + 273.2 )** 4. - ( tsk + 273.2 )** 4. )
+             rclo  = feff * acl * emcl * sigm *                                      &
+               ( ( tmrt + 273.2 )** 4. - ( tcl + 273.2 )** 4. )
+             rsum  = rbare + rclo
+
+      !--    CONVECTION
+
+             cbare = hc * ( ta - tsk ) * adu * ( 1. - facl )
+             cclo  = hc * ( ta - tcl ) * acl
+             csum  = cbare + cclo
+
+       !--   CORE TEMPERATUR
+
+             c(0)  = h + ere
+             c(1)  = adu * rob * cb
+             c(2)  = 18. - 0.5 * tsk
+             c(3)  = 5.28 * adu * c(2)
+             c(4)  = 0.0208 * c(1)
+             c(5)  = 0.76075 * c(1)
+             c(6)  = c(3) - c(5) - tsk * c(4)
+             c(7)  = - c(0) * c(2) - tsk * c(3) + tsk * c(5)
+             c(8)  = c(6) * c(6) - 4. * c(4) * c(7)
+             c(9)  = 5.28 * adu - c(5) - c(4) * tsk
+             c(10) = c(9) * c(9) - 4. * c(4) *                                       &
+               ( c(5) * tsk - c(0) - 5.28 * adu * tsk )
+
+             IF ( tsk .EQ. 36. ) tsk = 36.01
+             tcore(7) = c(0) / ( 5.28 * adu + c(1) * 6.3 / 3600. ) + tsk
+             tcore(3) = c(0) / ( 5.28 * adu + ( c(1) * 6.3 / 3600. ) /               &
+               ( 1. + 0.5 * ( 34. - tsk ) ) ) + tsk
+             IF ( c(10) .GE. 0.) THEN
+               tcore(6) = ( - c(9) - c(10)**0.5 ) / ( 2. * c(4) )
+               tcore(1) = ( - c(9) + c(10)**0.5 ) / ( 2. * c(4) )
+             END IF
+
+             IF ( c(8) .GE. 0. ) THEN
+               tcore(2) = ( - c(6) + ABS( c(8) ) ** 0.5 ) / ( 2. * c(4) )
+               tcore(5) = ( - c(6) - ABS( c(8) ) ** 0.5 ) / ( 2. * c(4) )
+               tcore(4) = c(0) / ( 5.28 * adu + c(1) * 1. / 40. ) + tsk
+             END IF
+
+      !--    TRANSPIRATION
+
+             tbody = 0.1 * tsk + 0.9 * tcore(j)
+             swm   = 304.94 * ( tbody - 36.6 ) * adu / 3600000.
+             vpts  = 6.11 * 10.**( 7.45 * tsk / ( 235. + tsk ) )
+
+             IF ( tbody .LE. 36.6 ) swm = 0.
+
+             sw = swm                                 !< make sure sw is initialized
+             IF ( sex .EQ. 2 ) sw = 0.7 * swm         !< reduce if female
+             eswphy = - sw * evap
+             he     = 0.633 * hc / ( p * cair )
+             fec    = 1. / ( 1. + 0.92 * hc * rcl )
+             eswpot = he * ( vpa - vpts ) * adu * evap * fec
+             wetsk  = eswphy / eswpot
+
+             IF ( wetsk .GT. 1. ) wetsk = 1.
+
+             eswdif = eswphy - eswpot
+
+             IF ( eswdif .LE. 0. ) esw = eswpot
+             IF ( eswdif .GT. 0. ) esw = eswphy
+             IF ( esw  .GT. 0. )   esw = 0.
+
+      !--    DIFFUSION
+
+             rdsk = 0.79 * 10. ** 7.
+             rdcl = 0.
+             ed   = evap / ( rdsk + rdcl ) * adu * ( 1. - wetsk ) * ( vpa - vpts )
+
+      !--    MAX VB
+
+             vb1 = 34. - tsk
+             vb2 = tcore(j) - 36.6
+
+             IF ( vb2 .LT. 0. ) vb2 = 0.
+             IF ( vb1 .LT. 0. ) vb1 = 0.
+             vb = ( 6.3 + 75. * vb2 ) / ( 1. + 0.5 * vb1 )
+
+      !--    ENERGY BALLANCE
+
+             enbal = h + ed + ere + esw + csum + rsum + food
+
+
+      !--    CLOTHING TEMPERATURE
+
+             xx = 0.001
+             IF ( count1 .EQ. 0 ) xx = 1.
+             IF ( count1 .EQ. 1 ) xx = 0.1
+             IF ( count1 .EQ. 2 ) xx = 0.01
+             IF ( count1 .EQ. 3 ) xx = 0.001
+
+             IF ( enbal .GT. 0. ) tcl = tcl + xx
+             IF ( enbal .LT. 0. ) tcl = tcl - xx
+
+             skipIncreaseCount = .FALSE.
+             IF ( ( (enbal .LE. 0.) .AND. (enbal2 .GT. 0.) ) .OR.                    &
+                ( ( enbal .GE. 0. ) .AND. ( enbal2 .LT. 0. ) ) ) THEN
+               skipIncreaseCount = .TRUE.
+             ELSE
+               enbal2 = enbal
+               count3 = count3 + 1
+             END IF
+
+             IF ( ( count3 .GT. 200 ) .OR. skipIncreaseCount ) THEN
+               IF ( count1 .LT. 3 ) THEN
+                 count1 = count1 + 1
+                 enbal2 = 0.
+               ELSE
+                 EXIT
+               END IF
+             END IF
+           END DO
+
+           IF ( count1 .EQ. 3 ) THEN
+             SELECT CASE ( j )
+               CASE ( 2, 5)
+                 IF ( .NOT. ( ( tcore(j) .GE. 36.6 ) .AND.                           &
+                   ( tsk .LE. 34.050 ) ) ) CYCLE
+               CASE ( 6, 1 )
+                 IF ( c(10) .LT. 0. ) CYCLE
+                 IF ( .NOT. ( ( tcore(j) .GE. 36.6 ) .AND.                           &
+                   ( tsk .GT. 33.850 ) ) ) CYCLE
+               CASE ( 3 )
+                 IF ( .NOT. ( ( tcore(j) .LT. 36.6 ) .AND.                           &
+                   ( tsk .LE. 34.000 ) ) ) CYCLE
+               CASE ( 7 )
+                 IF ( .NOT. ( ( tcore(j) .LT. 36.6 ) .AND.                           &
+                   ( tsk .GT. 34.000 ) ) ) CYCLE
+               CASE default  !< same as CASE ( 4 ), does actually nothing
+             END SELECT
+           END IF
+
+           IF ( ( j .NE. 4 ) .AND. ( vb .GE. 91. ) ) CYCLE
+           IF ( ( j .EQ. 4 ) .AND. ( vb .LT. 89. ) ) CYCLE
+           IF ( vb .GT. 90.) vb = 90.
+
+      !--  LOSSES BY WATER
+
+           ws = sw * 3600. * 1000.
+           IF ( ws .GT. 2000. ) ws = 2000.
+           wd = ed / evap * 3600. * ( -1000. )
+           wr = erel / evap * 3600. * ( -1000. )
+
+           wsum = ws + wr + wd
+
+           RETURN
+         END DO
+         RETURN
+       END SUBROUTINE heat_exch
+
+
+
+      !------------------------------------------------------------------------------!
+      ! Description:
+      ! ------------
+      !> Calculate PET
+      !------------------------------------------------------------------------------!
+       SUBROUTINE pet_iteration ( acl, adu, aeff, esw, facl, feff, p, rdcl,          &
+              rdsk, rtv, ta, tcl, tsk, tx, vpts, wetsk )
+      !
+      !  Input arguments:
+      ! ----------------
+         REAL(kind=8), INTENT( IN )  :: acl       !< clothing surface area        (m²)
+         REAL(kind=8), INTENT( IN )  :: adu       !< Du-Bois area                 (m²)
+         REAL(kind=8), INTENT( IN )  :: esw       !< energy-loss through sweat evap. (W)
+         REAL(kind=8), INTENT( IN )  :: facl      !< surface area extension through clothing (factor)
+         REAL(kind=8), INTENT( IN )  :: feff      !< surface modification by posture (factor)
+         REAL(kind=8), INTENT( IN )  :: p         !< air pressure                 (hPa)
+         REAL(kind=8), INTENT( IN )  :: rdcl      !<
+         REAL(kind=8), INTENT( IN )  :: rdsk      !<
+         REAL(kind=8), INTENT( IN )  :: rtv       !<
+         REAL(kind=8), INTENT( IN )  :: ta        !< air temperature              (°C)
+         REAL(kind=8), INTENT( IN )  :: tcl       !< clothing temperature         (°C)
+         REAL(kind=8), INTENT( IN )  :: tsk       !< skin temperature             (°C)
+         REAL(kind=8), INTENT( IN )  :: vpts      !<
+         REAL(kind=8), INTENT( IN )  :: wetsk     !< fraction of wet skin (dimensionless)
+      !
+      !  Output arguments:
+      ! ----------------
+         REAL(kind=8), INTENT( OUT ) :: aeff      !< effective surface area       (m²)
+         REAL(kind=8), INTENT( OUT ) :: tx        !< PET                          (°C)
+
+
+
+         REAL (kind=8)  :: cbare, cclo, csum, ed, enbal, enbal2, ere, erel, eres, hc,  &
+              rbare, rclo, rsum, tex, vpex, xx
+
+         INTEGER :: count1
+
+         tx = ta
+         enbal2 = 0.
+
+          DO count1 = 0, 3
+           DO
+             hc = 2.67 + 6.5 * 0.1 ** 0.67
+             hc = hc * ( p / po ) ** 0.55
+
+      !--    Radiation
+
+             aeff  = adu * feff
+             rbare = aeff * ( 1. - facl ) * emsk * sigm *                            &
+                 ( ( tx + 273.2 ) ** 4. - ( tsk + 273.2 ) ** 4. )
+             rclo  = feff * acl * emcl * sigm *                                      &
+                 ( ( tx + 273.2 ) ** 4. - ( tcl + 273.2 ) ** 4. )
+             rsum  = rbare + rclo
+
+      !--    Covection
+
+             cbare = hc * ( tx - tsk ) * adu * ( 1. - facl )
+             cclo  = hc * ( tx - tcl ) * acl
+             csum  = cbare + cclo
+
+      !--    Diffusion
+
+             ed = evap / ( rdsk + rdcl ) * adu * ( 1. - wetsk ) * ( 12. - vpts )
+
+      !--    Respiration
+
+             tex  = 0.47 * tx + 21.
+             eres = cair * ( tx - tex ) * rtv
+             vpex = 6.11 * 10. ** ( 7.45 * tex / ( 235. + tex ) )
+             erel = 0.623 * evap / p * ( 12. - vpex ) * rtv
+             ere  = eres + erel
+
+      !--    Energy ballance
+
+             enbal = h + ed + ere + esw + csum + rsum
+
+      !--    Iteration concerning ta
+
+             IF ( count1 .EQ. 0 )  xx = 1.
+             IF ( count1 .EQ. 1 )  xx = 0.1
+             IF ( count1 .EQ. 2 )  xx = 0.01
+             IF ( count1 .EQ. 3 )  xx = 0.001
+             IF ( enbal .GT. 0. )  tx = tx - xx
+             IF ( enbal .LT. 0. )  tx = tx + xx
+             IF ( ( enbal .LE. 0. ) .AND. ( enbal2 .GT. 0. ) ) EXIT
+             IF ( ( enbal .GE. 0. ) .AND. ( enbal2 .LT. 0. ) ) EXIT
+
+             enbal2 = enbal
+           END DO
+         END DO
+         RETURN
+       END SUBROUTINE pet_iteration
+
   DOUBLE precision function UTCI_approx(Ta,Tmrt,va,rh)
   !~ **********************************************
   !~ DOUBLE PRECISION Function value is the UTCI in degree Celsius

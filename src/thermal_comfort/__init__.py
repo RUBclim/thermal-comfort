@@ -4,5 +4,9 @@ utci_approx = thermal_comfort_mod.utci_approx
 utci_approx_vectorized = thermal_comfort_mod.utci_approx_vectorized
 es = thermal_comfort_mod.es
 es_vectorized = thermal_comfort_mod.es_vectorized
+calculate_pet_static = thermal_comfort_mod.calculate_pet_static
 
-__all__ = ['utci_approx', 'es', 'es_vectorized', 'utci_approx_vectorized']
+__all__ = [
+    'utci_approx', 'es', 'es_vectorized',
+    'utci_approx_vectorized', 'calculate_pet_static',
+]
