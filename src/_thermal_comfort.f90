@@ -113,7 +113,7 @@ CONTAINS
 !  stationary (calculated based on MEMI),
 !  Subroutine based on PETBER vers. 1.5.1996 by P. Hoeppe
 !------------------------------------------------------------------------------!
-   SUBROUTINE calculate_pet_static(ta, vpa, v, tmrt, p, tx)
+   SUBROUTINE calculate_pet_static(ta, rh, v, tmrt, p, tx)
       !-- Configure sample person (optional)
       !  age, mbody, ht, work, eta, icl, fcl, pos, sex )
 
@@ -124,7 +124,7 @@ CONTAINS
       REAL(kind=8), INTENT(IN) :: ta     !< Air temperature           (°C)
       REAL(kind=8), INTENT(IN) :: tmrt   !< Mean radiant temperature  (°C)
       REAL(kind=8), INTENT(IN) :: v      !< Wind speed                (m/s)
-      REAL(kind=8), INTENT(IN) :: vpa    !< Vapor pressure            (hPa)
+      REAL(kind=8), INTENT(IN) :: rh     !< relative humidity         (%)
       REAL(kind=8), INTENT(IN) :: p      !< Air pressure              (hPa)
       !
       !  Output arguments:
@@ -140,7 +140,7 @@ CONTAINS
       !  Internal variables:
       ! ----------------
       REAL(kind=8) :: acl, adu, aeff, ere, erel, esw, facl, feff, rdcl, &
-                      rdsk, rtv, vpts, tsk, tcl, wetsk
+                      rdsk, rtv, vpts, tsk, tcl, wetsk, vpa
       !
       !  Optional arguments not supported, removed
       !  REAL(kind=8), INTENT ( in ), optional :: age, mbody, ht, work, eta, icl, fcl
@@ -168,6 +168,7 @@ CONTAINS
       pos = 1
       sex = 1
       ! calculate vapor pressure from rh
+      vpa = (rh*es(Ta))/100.0
 
       ! !-- call subfunctions
       CALL in_body(ere, erel, p, rtv, ta, vpa)

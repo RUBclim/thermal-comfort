@@ -1,6 +1,8 @@
 import numpy as np
 import pytest
 from numpy.testing import assert_array_almost_equal
+from thermal_comfort import calculate_pet_static
+from thermal_comfort import es
 from thermal_comfort import utci_approx
 from thermal_comfort import utci_approx_vectorized
 
@@ -90,3 +92,30 @@ def test_utci_approx_native_vectorized_2d_array():
         expected,
         decimal=1,
     )
+
+
+def _rh(vpa, ta):
+    """we changed the interface of pet to use relative humidity instead of
+    vapour pressure, hence we need to calculate the relative humidity from
+    the vapour pressure and air temperature since only this is specified in the
+    paper by Höppe 1999
+    """
+    return (vpa * 100) / es(ta)
+
+
+@pytest.mark.parametrize(
+    ('ta', 'rh', 'v', 'tmrt', 'expected'),
+    # reference values are from Höppe 1999
+    (
+        (21, _rh(12, 21), 0.1, 21, 21),
+        (-5, _rh(2, -5), 0.5, 40, 10),
+        (-5, _rh(2, -5), 6, -5, -13),
+        (30, _rh(21, 30), 1, 60, 43),
+        (30, _rh(21, 30), 1, 30, 29),
+    ),
+)
+def test_calculate_pet_static(ta, rh, v, tmrt, expected):
+    # the values are only supplied as integers
+    assert np.round(
+        calculate_pet_static(ta=ta, rh=rh, v=v, tmrt=tmrt, p=1013.25),
+    ) == expected
