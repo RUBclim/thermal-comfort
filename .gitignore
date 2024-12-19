@@ -1,10 +1,11 @@
+*.egg-info
+*.mod
 .coverage
 .mypy_cache
 .pytest*
 .tox
 .vscode
 __pycache__
-venv
-*.egg-info
 build/*
-*.mod
+dist/*
+venv

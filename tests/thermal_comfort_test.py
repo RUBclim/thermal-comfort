@@ -1,8 +1,7 @@
 import numpy as np
 import pytest
 from numpy.testing import assert_array_almost_equal
-from thermal_comfort import calculate_pet_static
-from thermal_comfort import es
+from thermal_comfort import pet_static
 from thermal_comfort import utci_approx
 from thermal_comfort import utci_approx_vectorized
 
@@ -100,7 +99,7 @@ def _rh(vpa, ta):
     the vapour pressure and air temperature since only this is specified in the
     paper by Höppe 1999
     """
-    return (vpa * 100) / es(ta)
+    return (vpa * 100) / (6.1094 * np.exp(17.625 * ta / (ta + 243.04)))
 
 
 @pytest.mark.parametrize(
@@ -114,8 +113,8 @@ def _rh(vpa, ta):
         (30, _rh(21, 30), 1, 30, 29),
     ),
 )
-def test_calculate_pet_static(ta, rh, v, tmrt, expected):
+def test_pet_static(ta, rh, v, tmrt, expected):
     # the values are only supplied as integers
     assert np.round(
-        calculate_pet_static(ta=ta, rh=rh, v=v, tmrt=tmrt, p=1013.25),
+        pet_static(ta=ta, rh=rh, v=v, tmrt=tmrt, p=1013.25),
     ) == expected

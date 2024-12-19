@@ -1,3 +1,38 @@
+!> @file human_thermal_comfort_PET.f90
+!------------------------------------------------------------------------------!
+! This file is part of PALM-4U.
+!
+! PALM-4U is free software: you can redistribute it and/or modify it under the
+! terms of the GNU General Public License as published by the Free Software
+! Foundation, either version 3 of the License, or (at your option) any later
+! version.
+!
+! PALM-4U is distributed in the hope that it will be useful, but WITHOUT ANY
+! WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+! A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+!
+! You should have received a copy of the GNU General Public License along with
+! PALM. If not, see <http://www.gnu.org/licenses/>.
+!
+! Copyright 2018, Deutscher Wetterdienst (DWD) /
+! German Meteorological Service (DWD)
+!------------------------------------------------------------------------------!
+!
+! Current revisions: 003
+! -----------------
+! Initial revision 001
+!
+! Former revisions: 001
+! -----------------
+! $Id$
+!
+! Authors:
+! --------
+! @author Peter Höppe (original author)
+! @author Dominik Froehlich <dominik.froehlich@dwd.de> (PALM modification)
+!
+!------------------------------------------------------------------------------!
+
 !~ UTCI, Version a 0.002, October 2009
 !~ Copyright (C) 2009  Peter Broede
 
@@ -96,12 +131,9 @@ MODULE thermal_comfort_mod
    INTEGER :: pos     !< posture: 1 = standing, 2 = sitting
    INTEGER :: sex     !< sex: 1 = male, 2 = female
 
-   PUBLIC calculate_pet_static
+   PUBLIC pet_static
    PUBLIC UTCI_approx
    PUBLIC UTCI_approx_vectorized
-   !~ TODO: they should likely be private
-   PUBLIC es
-   PUBLIC es_vectorized_wexler
 
 CONTAINS
 
@@ -113,7 +145,7 @@ CONTAINS
 !  stationary (calculated based on MEMI),
 !  Subroutine based on PETBER vers. 1.5.1996 by P. Hoeppe
 !------------------------------------------------------------------------------!
-   SUBROUTINE calculate_pet_static(ta, rh, v, tmrt, p, tx)
+   SUBROUTINE pet_static(ta, rh, v, tmrt, p, tx)
       !-- Configure sample person (optional)
       !  age, mbody, ht, work, eta, icl, fcl, pos, sex )
 
@@ -179,7 +211,7 @@ CONTAINS
       CALL pet_iteration(acl, adu, aeff, esw, facl, feff, p, rdcl, &
                          rdsk, rtv, ta, tcl, tsk, tx, vpts, wetsk)
 
-   END SUBROUTINE calculate_pet_static
+   END SUBROUTINE pet_static
 
 !------------------------------------------------------------------------------!
 ! Description:
@@ -270,7 +302,7 @@ CONTAINS
 
       REAL(kind=8) :: c(0:10), cbare, cclo, csum, di, ed, enbal, enbal2, eswdif, &
                       eswphy, eswpot, fec, hc, he, htcl, r1, r2, rbare, rcl, rclo, rclo2, &
-                      rsum, sw, swf, swm, tbody, tcore(1:7), vb, vb1, vb2, wd, wr, ws, wsum, &
+                      rsum, sw, swm, tbody, tcore(1:7), vb, vb1, vb2, wd, wr, ws, wsum, &
                       xx, y
 
       INTEGER :: count1, count3, j
