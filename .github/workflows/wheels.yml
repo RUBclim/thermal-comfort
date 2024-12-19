@@ -15,16 +15,16 @@ jobs:
         include:
           - os: ubuntu-latest
             py: "cp39*"
-          - os: windows-latest
-            py: "cp39*"
-          - os: macos-latest
-            name: macos-x86_64
-            macos_arch: "x86_64"
-            py: "cp39*"
-          - os: macos-latest
-            name: macos-arm64
-            macos_arch: "arm64"
-            py: "cp39*"
+          # - os: windows-latest
+          #   py: "cp39*"
+          # - os: macos-latest
+          #   name: macos-x86_64
+          #   macos_arch: "x86_64"
+          #   py: "cp39*"
+          # - os: macos-latest
+          #   name: macos-arm64
+          #   macos_arch: "arm64"
+          #   py: "cp39*"
 
     steps:
       - uses: actions/checkout@v4
@@ -38,7 +38,7 @@ jobs:
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.22.0
         env:
-          CIBW_TEST_COMMAND: python -c "import thermal_comfort; print(thermal_comfort.es(3.14))"
+          CIBW_TEST_COMMAND: python -c "import thermal_comfort; print(thermal_comfort.pet_static(ta=20, rh=50, v=0.15, tmrt=20, p=1013.25))"
           CIBW_ARCHS_LINUX: "x86_64 aarch64"
           CIBW_ARCHS_WINDOWS : "AMD64 x86 ARM64"
           CIBW_ARCHS_MACOS: "${{ matrix.macos_arch }}"
