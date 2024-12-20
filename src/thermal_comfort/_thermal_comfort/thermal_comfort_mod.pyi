@@ -1,9 +1,10 @@
-from numpy.typing import ArrayLike
 from typing import Any
+
 import numpy.typing as npt
+from numpy.typing import ArrayLike
 
 
-def pet_static(ta: float, rh: float, v:float, tmrt: float, p: float) -> float:
+def pet_static(ta: float, rh: float, v: float, tmrt: float, p: float) -> float:
     """Calculate the Physiological Equivalent Temperature (PET).
 
     The PET is implemented as described in VDI 3787 Part 2. The fortran code was
@@ -38,15 +39,15 @@ def pet_static(ta: float, rh: float, v:float, tmrt: float, p: float) -> float:
     :param p: atmospheric pressure in hPa
 
     :returns: Physiological Equivalent Temperature (PET) in °C
-    """
+    """  # noqa: E501
     ...
 
 
 def utci_approx(
         ta: ArrayLike,
         tmrt: ArrayLike,
-        va:ArrayLike,
-        rh:ArrayLike,
+        va: ArrayLike,
+        rh: ArrayLike,
 ) -> npt.NDArray[Any]:
     """Calculate the Universal Thermal Climate Index (UTCI)
 
