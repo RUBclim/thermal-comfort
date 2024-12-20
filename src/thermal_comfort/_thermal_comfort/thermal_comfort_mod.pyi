@@ -1,7 +1,10 @@
 from typing import Any
+from typing import TypeVar
 
+import numpy as np
 import numpy.typing as npt
-from numpy.typing import ArrayLike
+
+T = TypeVar('T', bound=np.floating | np.integer)
 
 
 def pet_static(ta: float, rh: float, v: float, tmrt: float, p: float) -> float:
@@ -44,10 +47,10 @@ def pet_static(ta: float, rh: float, v: float, tmrt: float, p: float) -> float:
 
 
 def utci_approx(
-        ta: ArrayLike,
-        tmrt: ArrayLike,
-        va: ArrayLike,
-        rh: ArrayLike,
+        ta: npt.NDArray[T] | float,
+        tmrt: npt.NDArray[T] | float,
+        va: npt.NDArray[T] | float,
+        rh: npt.NDArray[T] | float,
 ) -> npt.NDArray[Any]:
     """Calculate the Universal Thermal Climate Index (UTCI)
 
@@ -69,4 +72,39 @@ def utci_approx(
 
     :returns: Universal Thermal Climate Index (UTCI) in °C
     """
+    ...
+
+
+def mrt(
+        tg: npt.NDArray[T] | float,
+        va: npt.NDArray[T] | float,
+        ta: npt.NDArray[T] | float,
+        d: npt.NDArray[T] | float,
+        e: npt.NDArray[T] | float,
+) -> npt.NDArray[T]:
+    """
+    Calculate the mean radiant temperature based on DIN EN ISO 7726.
+
+    Based on the air velocity, this function will decide whether to use the
+    natural or forced convection.
+
+    Calculate hcg (the coefficient of heat transfer) for both natural and forced
+    convection. Check which one is higher and use that (defined in Section B.2.3)
+
+    This function performs better for larger arrays. For smaller arrays, the
+    numpy-based function outperforms this function.
+
+    :param tg: black globe temperature
+    :param va: air velocity
+    :param ta: air temperature
+    :param d: diameter of the black globe (default 0.15 m)
+    :param e: emissivity of the black globe (default 0.95)
+    """
+    ...
+
+
+def twb(
+        ta: npt.NDArray[T] | float,
+        rh: npt.NDArray[T] | float,
+) -> npt.NDArray[T]:
     ...

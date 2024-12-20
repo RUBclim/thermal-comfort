@@ -3,7 +3,10 @@ import math
 import numpy as np
 import pytest
 from numpy.testing import assert_array_almost_equal
+from thermal_comfort import mrt
+from thermal_comfort import mrt_np
 from thermal_comfort import pet_static
+from thermal_comfort import twb
 from thermal_comfort import utci_approx
 
 
@@ -219,3 +222,53 @@ def test_pet_static_values_is_none(ta, rh, v, tmrt, p):
     with pytest.raises(TypeError) as exc_info:
         pet_static(ta=ta, rh=rh, v=v, tmrt=tmrt, p=p)
     assert "can't be converted to double" in exc_info.value.args[0]
+
+
+@pytest.mark.parametrize('f', [mrt, mrt_np])
+@pytest.mark.parametrize(
+    ('tg', 'va', 'ta', 'd', 'expected'),
+    (
+        # the first two cases are example from DIN EN ISO 7726, however
+        # they perform very strict rounding, leading to slightly different results
+        # here since there is no rounding done
+        pytest.param(55, 0.3, 30, 0.15, 74.4, id='forced convection'),
+        pytest.param(53.2, 0.3, 30, 0.1, 74.6, id='globe diameter 0.1'),
+        pytest.param(55, 0.1, 30, 0.15, 55.0, id='natural convection'),
+    ),
+)
+def test_tmrt_scalar_values(tg, va, ta, d, expected, f):
+    assert pytest.approx(f(tg=tg, va=va, ta=ta, d=d, e=0.95), abs=1e-1) == expected
+
+
+def test_tmrt_array_values_default_d_e():
+    tg = np.array([55, 53.2, 55])
+    va = np.array([0.3, 0.3, 0.1])
+    ta = np.array([30, 30, 30])
+    expected = np.array([74.4, 71.6, 55.0])
+    assert pytest.approx(mrt_np(tg=tg, va=va, ta=ta), abs=1e-1) == expected
+
+
+@pytest.mark.parametrize('f', [mrt, mrt_np])
+def test_tmrt_array_values(f):
+    tg = np.array([55, 53.2, 55])
+    va = np.array([0.3, 0.3, 0.1])
+    ta = np.array([30, 30, 30])
+    d = np.array([0.15, 0.1, 0.15])
+    e = np.array([0.95, 0.95, 0.95])
+    expected = np.array([74.4, 74.6, 55.0])
+    assert_array_almost_equal(
+        f(tg=tg, va=va, ta=ta, d=d, e=e),
+        expected,
+        decimal=1,
+    )
+
+
+@pytest.mark.parametrize(
+    ('ta', 'rh', 'expected'),
+    (
+        # this case is from Stull et al. 2011
+        pytest.param(20, 50, 13.7),
+    ),
+)
+def test_twb_scalar_values(ta, rh, expected):
+    assert pytest.approx(twb(ta=ta, rh=rh), abs=1e-1) == expected

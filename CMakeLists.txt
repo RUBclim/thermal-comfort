@@ -5,10 +5,10 @@ project(
   VERSION ${SKBUILD_PROJECT_VERSION})
 
 set(ModuleName "_thermal_comfort")
+# we can add -ffast-math if we do the checking for NaNs in python
 set(CMAKE_Fortran_FLAGS
-    "${CMAKE_Fortran_FLAGS} -O3 -Wall -march=native -ftree-vectorize -funroll-loops -cpp"
+    "${CMAKE_Fortran_FLAGS} -Ofast -Wall -march=native -ftree-vectorize -funroll-loops -flto"
 )
-
 find_package(
   Python
   COMPONENTS Interpreter Development.Module NumPy ${SKBUILD_SABI_COMPONENT}

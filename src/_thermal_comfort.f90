@@ -134,6 +134,8 @@ MODULE thermal_comfort_mod
 
    PUBLIC pet_static
    PUBLIC UTCI_approx
+   PUBLIC mrt
+   PUBLIC twb
 
 CONTAINS
 
@@ -191,7 +193,7 @@ CONTAINS
 
       ! this never converges if a value is nan so  we need to check if any of the values are nan
       IF (ieee_is_nan(ta) .OR. ieee_is_nan(rh) .OR. ieee_is_nan(tmrt) .OR. ieee_is_nan(v) .OR. &
-          ieee_is_nan(p) .OR. ieee_is_nan(tx)) THEN
+          ieee_is_nan(p)) THEN
          tx = ieee_value(tx, ieee_quiet_nan)
          RETURN
       END IF
@@ -876,4 +878,41 @@ CONTAINS
                      (1.48348065D-03)*Pa*Pa*Pa*Pa*Pa*Pa
    END
 
+   FUNCTION tmrt_forced_convection(tg, ta, va, d, e)
+      IMPLICIT NONE
+      REAL(kind=8), INTENT(IN) :: tg(:), ta(:), va(:), d(:), e(:)
+      REAL(kind=8) :: tmrt_forced_convection(size(tg))
+      tmrt_forced_convection = ((((tg + 273)**4) + (((1.1*(10**8))*va**0.6)/(e*(d**0.4)))*(tg - ta))**0.25) - 273
+   END FUNCTION tmrt_forced_convection
+
+   FUNCTION tmrt_natural_convection(tg, ta, d, e)
+      IMPLICIT NONE
+      REAL(kind=8), INTENT(IN) :: tg(:), ta(:), d(:), e(:)
+      REAL(kind=8) :: tmrt_natural_convection(size(tg))
+      tmrt_natural_convection = ((((tg + 273)**4) + ((0.25*10)**8/e)*((ABS(tg - ta)/d)**0.25)*(tg - ta))**0.25) - 273
+   END FUNCTION tmrt_natural_convection
+
+   FUNCTION mrt(tg, va, ta, d, e)
+      IMPLICIT NONE
+      REAL(kind=8), INTENT(IN) :: tg(:), va(:), ta(:), d(:), e(:)
+      REAL(kind=8) :: mrt(size(tg)), hcg_natural(size(tg)), hcg_forced(size(tg))
+
+      ! calculate both versions of hgc and check which one is larger
+      hcg_natural = (1.4*(ABS(tg - ta)/0.15)**0.25)
+      hcg_forced = (6.3*((va**0.6)/(d**0.4)))
+      mrt = MERGE( &
+            tmrt_natural_convection(tg, ta, d, e), &
+            tmrt_forced_convection(tg, ta, va, d, e), &
+            hcg_natural > hcg_forced &
+            )
+   END FUNCTION mrt
+
+   FUNCTION twb(ta, rh)
+      IMPLICIT NONE
+      REAL(kind=8), INTENT(IN) :: ta(:), rh(:)
+      REAL(kind=8) :: twb(size(ta))
+      twb = ta*atan(0.151977*(rh + 8.313659)**0.5) + &
+            atan(ta + rh) - atan(rh - 1.676331) + 0.00391838* &
+            (rh)**1.5*atan(0.023101*rh) - 4.686035
+   END FUNCTION twb
 END MODULE thermal_comfort_mod
