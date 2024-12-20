@@ -3,7 +3,6 @@ import pytest
 from numpy.testing import assert_array_almost_equal
 from thermal_comfort import pet_static
 from thermal_comfort import utci_approx
-from thermal_comfort import utci_approx_vectorized
 
 
 def load_test_data():
@@ -17,7 +16,6 @@ def load_test_data():
     return values
 
 
-@pytest.mark.parametrize('f', (utci_approx, utci_approx_vectorized))
 @pytest.mark.parametrize(
     (
         'ta', 'd_tmrt', 'va', 'rh', 'pa', 'offset',
@@ -26,7 +24,6 @@ def load_test_data():
     (*load_test_data(),),
 )
 def test_utci_approx(
-        f,
         ta,
         d_tmrt,
         va,
@@ -38,25 +35,9 @@ def test_utci_approx(
         utci_polynomial,
 ):
     assert pytest.approx(
-        f(ta=ta, tmrt=d_tmrt + ta, va=va, rh=rh),
+        utci_approx(ta=ta, tmrt=d_tmrt + ta, va=va, rh=rh),
         abs=1e-1,
     ) == utci_polynomial
-
-
-def test_utci_approx_numpy_vectorized():
-    data = np.array(load_test_data())
-    ta = data[:, 0]
-    tmrt = data[:, 1] + data[:, 0]
-    va = data[:, 2]
-    rh = data[:, 3]
-    expected = data[:, 8]
-    utci_approx_vectorized = np.vectorize(utci_approx, otypes=[float])
-
-    assert_array_almost_equal(
-        utci_approx_vectorized(ta=ta, tmrt=tmrt, va=va, rh=rh),
-        expected,
-        decimal=1,
-    )
 
 
 def test_utci_approx_native_vectorized():
@@ -68,7 +49,7 @@ def test_utci_approx_native_vectorized():
     expected = data[:, 8]
 
     assert_array_almost_equal(
-        utci_approx_vectorized(ta=ta, tmrt=tmrt, va=va, rh=rh),
+        utci_approx(ta=ta, tmrt=tmrt, va=va, rh=rh),
         expected,
         decimal=1,
     )
@@ -82,7 +63,7 @@ def test_utci_approx_native_vectorized_2d_array():
     expected = np.array([[-95.2, -90.4], [-98.7, -66.1]])
 
     assert_array_almost_equal(
-        utci_approx_vectorized(
+        utci_approx(
             ta=ta,
             tmrt=tmrt,
             va=va,

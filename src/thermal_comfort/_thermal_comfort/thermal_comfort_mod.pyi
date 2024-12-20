@@ -1,7 +1,7 @@
 from numpy.typing import ArrayLike
 from typing import Any
 import numpy.typing as npt
-import os
+
 
 def pet_static(ta: float, rh: float, v:float, tmrt: float, p: float) -> float:
     """Calculate the Physiological Equivalent Temperature (PET).
@@ -39,29 +39,10 @@ def pet_static(ta: float, rh: float, v:float, tmrt: float, p: float) -> float:
 
     :returns: Physiological Equivalent Temperature (PET) in °C
     """
-
-def utci_approx(ta: float, tmrt: float, va:float, rh:float) -> float:
-    """Calculate the Universal Thermal Climate Index (UTCI)
-
-    The UTCI is implemented as described in VDI 3787 Part 2. The fortran code was
-    vendored from here:
-
-    - https://utci.org/resources/UTCI%20Program%20Code.zip
-
-
-    The procedure does not work on arrays. Use :func:`utci_approx_vectorized` instead.
-
-    :param ta: air temperature in °C
-    :param tmrt: mean radiant temperature in °C
-    :param va: wind speed in m/s
-    :param rh: relative humidity in %
-
-    :returns: Universal Thermal Climate Index (UTCI) in °C
-    """
     ...
 
 
-def utci_approx_vectorized(
+def utci_approx(
         ta: ArrayLike,
         tmrt: ArrayLike,
         va:ArrayLike,
