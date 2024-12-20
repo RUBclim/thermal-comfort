@@ -90,6 +90,7 @@
 !~ OF THE POSSIBILITY OF SUCH DAMAGES.
 
 MODULE thermal_comfort_mod
+   USE, INTRINSIC :: ieee_arithmetic
    IMPLICIT NONE
 
    PRIVATE
@@ -187,6 +188,13 @@ CONTAINS
       !   IF ( .NOT. present( fcl ) )   fcl   =  1.15
       !   IF ( .NOT. present( pos ) )   pos   =  1
       !   IF ( .NOT. present( sex ) )   sex   =  1
+
+      ! this never converges if a value is nan so  we need to check if any of the values are nan
+      IF (ieee_is_nan(ta) .OR. ieee_is_nan(rh) .OR. ieee_is_nan(tmrt) .OR. ieee_is_nan(v) .OR. &
+          ieee_is_nan(p) .OR. ieee_is_nan(tx)) THEN
+         tx = ieee_value(tx, ieee_quiet_nan)
+         RETURN
+      END IF
 
       !   MEMI configuration
       age = 35.

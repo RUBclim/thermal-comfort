@@ -1,3 +1,5 @@
+import math
+
 import numpy as np
 import pytest
 from numpy.testing import assert_array_almost_equal
@@ -40,7 +42,31 @@ def test_utci_approx(
     ) == utci_polynomial
 
 
-def test_utci_approx_native_vectorized():
+@pytest.mark.parametrize(
+    ('ta', 'tmrt', 'va', 'rh'),
+    (
+        (20, 20, 0.5, float('nan')),
+        (20, 20, float('nan'), 50),
+        (20, 20, float('nan'), float('nan')),
+        (20, float('nan'), 0.5, 50),
+        (20, float('nan'), 0.5, float('nan')),
+        (20, float('nan'), float('nan'), 50),
+        (20, float('nan'), float('nan'), float('nan')),
+        (float('nan'), 20, 0.5, 50),
+        (float('nan'), 20, 0.5, float('nan')),
+        (float('nan'), 20, float('nan'), 50),
+        (float('nan'), 20, float('nan'), float('nan')),
+        (float('nan'), float('nan'), 0.5, 50),
+        (float('nan'), float('nan'), 0.5, float('nan')),
+        (float('nan'), float('nan'), float('nan'), 50),
+        (float('nan'), float('nan'), float('nan'), float('nan')),
+    ),
+)
+def test_utci_approx_missing_value(ta, tmrt, va, rh):
+    assert math.isnan(utci_approx(ta=ta, tmrt=tmrt, va=va, rh=rh)[0])
+
+
+def test_utci_approx_with_vectors():
     data = np.array(load_test_data())
     ta = data[:, 0]
     tmrt = data[:, 1] + data[:, 0]
@@ -99,3 +125,97 @@ def test_pet_static(ta, rh, v, tmrt, expected):
     assert np.round(
         pet_static(ta=ta, rh=rh, v=v, tmrt=tmrt, p=1013.25),
     ) == expected
+
+
+@pytest.mark.parametrize(
+    ('ta', 'rh', 'v', 'tmrt', 'p'),
+    (
+        (20, 50, 0.2, 31, float('nan')),
+        (20, 50, 0.2, float('nan'), 1013.25),
+        (20, 50, 0.2, float('nan'), float('nan')),
+        (20, 50, float('nan'), 31, 1013.25),
+        (20, 50, float('nan'), 31, float('nan')),
+        (20, 50, float('nan'), float('nan'), 1013.25),
+        (20, 50, float('nan'), float('nan'), float('nan')),
+        (20, float('nan'), 0.2, 31, 1013.25),
+        (20, float('nan'), 0.2, 31, float('nan')),
+        (20, float('nan'), 0.2, float('nan'), 1013.25),
+        (20, float('nan'), 0.2, float('nan'), float('nan')),
+        (20, float('nan'), float('nan'), 31, 1013.25),
+        (20, float('nan'), float('nan'), 31, float('nan')),
+        (20, float('nan'), float('nan'), float('nan'), 1013.25),
+        (20, float('nan'), float('nan'), float('nan'), float('nan')),
+        (float('nan'), 50, 0.2, 31, 1013.25),
+        (float('nan'), 50, 0.2, 31, float('nan')),
+        (float('nan'), 50, 0.2, float('nan'), 1013.25),
+        (float('nan'), 50, 0.2, float('nan'), float('nan')),
+        (float('nan'), 50, float('nan'), 31, 1013.25),
+        (float('nan'), 50, float('nan'), 31, float('nan')),
+        (float('nan'), 50, float('nan'), float('nan'), 1013.25),
+        (float('nan'), 50, float('nan'), float('nan'), float('nan')),
+        (float('nan'), float('nan'), 0.2, 31, 1013.25),
+        (float('nan'), float('nan'), 0.2, 31, float('nan')),
+        (float('nan'), float('nan'), 0.2, float('nan'), 1013.25),
+        (float('nan'), float('nan'), 0.2, float('nan'), float('nan')),
+        (float('nan'), float('nan'), float('nan'), 31, 1013.25),
+        (float('nan'), float('nan'), float('nan'), 31, float('nan')),
+        (float('nan'), float('nan'), float('nan'), float('nan'), 1013.25),
+        (float('nan'), float('nan'), float('nan'), float('nan'), float('nan')),
+    ),
+)
+def test_pet_static_missing_value(ta, rh, v, tmrt, p):
+    assert math.isnan(pet_static(ta=ta, rh=rh, v=v, tmrt=tmrt, p=p))
+
+
+def test_pet_static_missing_value_mixed_array():
+    f = np.vectorize(pet_static, otypes=[float], cache=True)
+    result = f(
+        ta=np.array([20, float('nan')]),
+        rh=np.array([50, float('nan')]),
+        v=np.array([0.5, float('nan')]),
+        tmrt=np.array([20, float('nan')]),
+        p=np.array([1013.5, float('nan')]),
+    )
+    assert_array_almost_equal(result, [18, float('nan')], decimal=1)
+
+
+@pytest.mark.parametrize(
+    ('ta', 'rh', 'v', 'tmrt', 'p'),
+    (
+        (20, 50, 0.2, 31, None),
+        (20, 50, 0.2, None, 1013.25),
+        (20, 50, 0.2, None, None),
+        (20, 50, None, 31, 1013.25),
+        (20, 50, None, 31, None),
+        (20, 50, None, None, 1013.25),
+        (20, 50, None, None, None),
+        (20, None, 0.2, 31, 1013.25),
+        (20, None, 0.2, 31, None),
+        (20, None, 0.2, None, 1013.25),
+        (20, None, 0.2, None, None),
+        (20, None, None, 31, 1013.25),
+        (20, None, None, 31, None),
+        (20, None, None, None, 1013.25),
+        (20, None, None, None, None),
+        (None, 50, 0.2, 31, 1013.25),
+        (None, 50, 0.2, 31, None),
+        (None, 50, 0.2, None, 1013.25),
+        (None, 50, 0.2, None, None),
+        (None, 50, None, 31, 1013.25),
+        (None, 50, None, 31, None),
+        (None, 50, None, None, 1013.25),
+        (None, 50, None, None, None),
+        (None, None, 0.2, 31, 1013.25),
+        (None, None, 0.2, 31, None),
+        (None, None, 0.2, None, 1013.25),
+        (None, None, 0.2, None, None),
+        (None, None, None, 31, 1013.25),
+        (None, None, None, 31, None),
+        (None, None, None, None, 1013.25),
+        (None, None, None, None, None),
+    ),
+)
+def test_pet_static_values_is_none(ta, rh, v, tmrt, p):
+    with pytest.raises(TypeError) as exc_info:
+        pet_static(ta=ta, rh=rh, v=v, tmrt=tmrt, p=p)
+    assert "can't be converted to double" in exc_info.value.args[0]
