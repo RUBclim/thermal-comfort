@@ -1,18 +1,19 @@
 from typing import TypeVar
+from typing import Union
 
 import numpy as np
 import numpy.typing as npt
 
-T = TypeVar('T', bound=np.floating | np.integer)
+T = TypeVar('T', bound=Union[np.floating, np.integer])
 
 
 def _tmrt_forced_convection(
-        tg: npt.NDArray[T] | float,
-        ta: npt.NDArray[T] | float,
-        va: npt.NDArray[T] | float,
-        d: npt.NDArray[T] | float,
-        e: npt.NDArray[T] | float,
-) -> npt.NDArray[T] | np.floating:
+        tg: Union[npt.NDArray[T], float],
+        ta: Union[npt.NDArray[T], float],
+        va: Union[npt.NDArray[T], float],
+        d: Union[npt.NDArray[T], float],
+        e: Union[npt.NDArray[T], float],
+) -> Union[npt.NDArray[T], np.floating]:
     """
     Calculate the mean radiant temperature based on DIN EN ISO 7726 for forced
     convection.
@@ -37,11 +38,11 @@ def _tmrt_forced_convection(
 
 
 def _tmrt_natural_convection(
-        tg: npt.NDArray[T] | float,
-        ta: npt.NDArray[T] | float,
-        d: npt.NDArray[T] | float,
-        e: npt.NDArray[T] | float,
-) -> npt.NDArray[T] | np.floating:
+        tg: Union[npt.NDArray[T], float],
+        ta: Union[npt.NDArray[T], float],
+        d: Union[npt.NDArray[T], float],
+        e: Union[npt.NDArray[T], float],
+) -> Union[npt.NDArray[T], np.floating]:
     """
     Calculate the mean radiant temperature based on DIN EN ISO 7726 for natural
     convection.
@@ -61,12 +62,12 @@ def _tmrt_natural_convection(
 
 
 def mrt_np(
-        tg: npt.NDArray[T] | float,
-        va: npt.NDArray[T] | float,
-        ta: npt.NDArray[T] | float,
-        d: npt.NDArray[T] | float = 0.15,
-        e: npt.NDArray[T] | float = 0.95,
-) -> npt.NDArray[T] | np.floating:
+        tg: Union[npt.NDArray[T], float],
+        va: Union[npt.NDArray[T], float],
+        ta: Union[npt.NDArray[T], float],
+        d: Union[npt.NDArray[T], float] = 0.15,
+        e: Union[npt.NDArray[T], float] = 0.95,
+) -> Union[npt.NDArray[T], np.floating]:
     """
     Calculate the mean radiant temperature based on DIN EN ISO 7726.
 

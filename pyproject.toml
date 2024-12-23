@@ -10,10 +10,10 @@ dependencies = [
 ]
 requires-python = ">=3.9"
 authors = [
-  {name = "Another person"}
+  {name = "Jonas Kittner"}
 ]
 maintainers = [
-  {name = "Another person", email = 'test@example.com'}
+  {name = "Jonas Kittner", email = 'jonas.kittner@rub.de'}
 ]
 description = "Functions to calculate thermal comfort indices"
 readme = "README.md"
