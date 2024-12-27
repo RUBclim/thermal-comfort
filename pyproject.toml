@@ -69,7 +69,8 @@ build = "cp39-*"
 skip = "pp*"
 
 [tool.cibuildwheel.linux]
-archs = ["x86_64", "aarch64"]
+# There is an error on aarch64: Fatal Error: Cannot find an intrinsic module named 'ieee_arithmetic' at (1)
+archs = ["x86_64"]
 
 [tool.cibuildwheel.windows]
 archs = ["auto", "ARM64"]
