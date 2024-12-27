@@ -37,13 +37,6 @@ jobs:
 
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.22.0
-        env:
-          CIBW_TEST_COMMAND: python -c "import thermal_comfort; print(thermal_comfort.pet_static(ta=20, rh=50, v=0.15, tmrt=20, p=1013.25))"
-          CIBW_ARCHS_LINUX: "x86_64 aarch64"
-          CIBW_ARCHS_WINDOWS : "AMD64 x86 ARM64"
-          CIBW_ARCHS_MACOS: "${{ matrix.macos_arch }}"
-          CIBW_SKIP: "pp*"
-          CIBW_BUILD: "${{ matrix.py }}"
 
       - uses: actions/upload-artifact@v4
         with:

@@ -61,3 +61,18 @@ disallow_untyped_defs = false
 [[tool.mypy.overrides]]
 module = ["tests.*"]
 disallow_untyped_defs = false
+
+[tool.cibuildwheel]
+test-command = "python -c 'import thermal_comfort; thermal_comfort.pet_static(ta=20, rh=50, v=0.15, tmrt=20, p=1013.25)'"
+build-frontend = "build[uv]"
+build = "cp39-*"
+skip = "pp*"
+
+[tool.cibuildwheel.linux]
+archs = ["x86_64", "aarch64"]
+
+[tool.cibuildwheel.windows]
+archs = ["auto", "ARM64"]
+
+[tool.cibuildwheel.macos]
+archs = ["x86_64", "arm64"]
