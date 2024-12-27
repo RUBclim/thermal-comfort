@@ -17,9 +17,9 @@ maintainers = [
 ]
 description = "Functions to calculate thermal comfort indices"
 readme = "README.md"
-license = {file = "LICENSE"}
+license-files = ["LICENSE*"]
 classifiers = [
-    "License :: OSI Approved :: MIT License",
+    "License :: OSI Approved :: GNU General Public License (GPL)",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
     "Programming Language :: Python :: Implementation :: CPython",
@@ -33,6 +33,7 @@ Issues = "https://github.com/RUBclim/thermal-comfort/issues"
 ninja.version = ">=1.10"
 cmake.version = ">=3.17.2"
 wheel.py-api = "cp39"
+wheel.license-files = ["LICENSE*"]
 
 [tool.coverage.report]
 fail_under = 100
