@@ -2,6 +2,7 @@ covdefaults
 coverage
 furo
 myst_parser
+pandas
 pytest
 pytest-randomly
 sphinx

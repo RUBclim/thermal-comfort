@@ -1,8 +1,10 @@
 import math
 
 import numpy as np
+import pandas as pd
 import pytest
 from numpy.testing import assert_array_almost_equal
+from pandas.testing import assert_series_equal
 from thermal_comfort import mrt
 from thermal_comfort import mrt_np
 from thermal_comfort import pet_static
@@ -81,6 +83,26 @@ def test_utci_approx_with_vectors():
         utci_approx(ta=ta, tmrt=tmrt, va=va, rh=rh),
         expected,
         decimal=1,
+    )
+
+
+def test_utci_approx_with_pandas_series():
+    df = pd.DataFrame(
+        load_test_data(),
+        columns=[
+            'Ta', 'Tr-Ta', 'va', 'rH', 'pa',
+            'Offset', 'UTCI', 'UTCI_Table', 'UTCI_polynomial',
+        ],
+    )
+    df['tmrt'] = df['Ta'] + df['Tr-Ta']
+    df['utci_calc'] = utci_approx(
+        ta=df['Ta'], tmrt=df['tmrt'], va=df['va'], rh=df['rH'],
+    )
+    assert_series_equal(
+        left=df['UTCI_polynomial'],
+        right=df['utci_calc'],
+        atol=1e-1,
+        check_names=False,
     )
 
 
@@ -180,6 +202,24 @@ def test_pet_static_missing_value_mixed_array():
         p=np.array([1013.5, float('nan')]),
     )
     assert_array_almost_equal(result, [18, float('nan')], decimal=1)
+
+
+def test_pet_static_missing_value_mixed_series():
+    f = np.vectorize(pet_static, otypes=[float], cache=True)
+    df = pd.DataFrame({
+        'ta': pd.Series([20, float('nan')]),
+        'rh': pd.Series([50, float('nan')]),
+        'v': pd.Series([0.5, float('nan')]),
+        'tmrt': pd.Series([20, float('nan')]),
+        'p': pd.Series([1013.5, float('nan')]),
+    })
+    df['result'] = f(ta=df['ta'], rh=df['rh'], v=df['v'], tmrt=df['tmrt'], p=df['p'])
+    assert_series_equal(
+        left=df['result'],
+        right=pd.Series([18, float('nan')]),
+        atol=1,
+        check_names=False,
+    )
 
 
 @pytest.mark.parametrize(
