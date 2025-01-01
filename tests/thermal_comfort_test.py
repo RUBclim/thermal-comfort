@@ -23,6 +23,7 @@ def load_test_data():
     return values
 
 
+@pytest.mark.filterwarnings('ignore:encountered a value for')
 @pytest.mark.parametrize(
     (
         'ta', 'd_tmrt', 'va', 'rh', 'pa', 'offset',
@@ -71,6 +72,7 @@ def test_utci_approx_missing_value(ta, tmrt, va, rh):
     assert math.isnan(utci_approx(ta=ta, tmrt=tmrt, va=va, rh=rh)[0])
 
 
+@pytest.mark.filterwarnings('ignore:encountered a value for')
 def test_utci_approx_with_vectors():
     data = np.array(load_test_data())
     ta = data[:, 0]
@@ -86,6 +88,7 @@ def test_utci_approx_with_vectors():
     )
 
 
+@pytest.mark.filterwarnings('ignore:encountered a value for')
 def test_utci_approx_with_pandas_series():
     df = pd.DataFrame(
         load_test_data(),
@@ -109,9 +112,9 @@ def test_utci_approx_with_pandas_series():
 def test_utci_approx_native_vectorized_2d_array():
     ta = np.array([[-49.9, -49.8], [-49.2, -49]])
     tmrt = np.array([[-16.7 + -49.9, -14.6 + -49.8], [-5.6 + -49.2, -17.2 + -49]])
-    va = np.array([[28, 14], [18, 5]])
+    va = np.array([[8, 4], [8, 5]])
     rh = np.array([[78, 77], [100, 98]])
-    expected = np.array([[-95.2, -90.4], [-98.7, -66.1]])
+    expected = np.array([[-75.7, -63.5], [-73.9, -66.1]])
 
     assert_array_almost_equal(
         utci_approx(
@@ -122,6 +125,37 @@ def test_utci_approx_native_vectorized_2d_array():
         ).reshape((2, 2), order='F'),
         expected,
         decimal=1,
+    )
+
+
+@pytest.mark.parametrize('ta', (-50.1, 50.1))
+def test_utci_approx_warning_raised_when_outside_of_range_ta(ta):
+    with pytest.warns(RuntimeWarning) as w:
+        utci_approx(ta=ta, tmrt=60, va=1, rh=50)
+
+    assert w[0].message.args[0] == (
+        'encountered a value for ta outside of the defined range of -50 <= ta <= 50 °C'
+    )
+
+
+@pytest.mark.parametrize('tmrt', (-10.1, 90.1))
+def test_utci_approx_warning_raised_when_outside_of_range_tmrt(tmrt):
+    with pytest.warns(RuntimeWarning) as w:
+        utci_approx(ta=20, tmrt=tmrt, va=1, rh=50)
+
+    assert w[0].message.args[0] == (
+        'encountered a value for tmrt outside of the defined range of '
+        '-30 °C below or 70 °C above ta'
+    )
+
+
+@pytest.mark.parametrize('va', (0.49, 17.1))
+def test_utci_approx_warning_raised_when_outside_of_range_va(va):
+    with pytest.warns(RuntimeWarning) as w:
+        utci_approx(ta=20, tmrt=60, va=va, rh=50)
+
+    assert w[0].message.args[0] == (
+        'encountered a value for va outside of the defined range of 0.5 <= va <= 17'
     )
 
 

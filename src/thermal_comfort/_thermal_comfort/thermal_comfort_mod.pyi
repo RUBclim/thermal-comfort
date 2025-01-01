@@ -32,7 +32,7 @@ def pet_static(ta: float, rh: float, v: float, tmrt: float, p: float) -> float:
     - ``pos = 1``
     - ``sex = 1``
 
-    The procedure does not work on arrays. It has to be wrappen in ``np.vectorize`` to
+    The procedure does not work on arrays. It has to be wrapped in ``np.vectorize`` to
     properly work on arrays.
 
     :param ta: air temperature in °C
