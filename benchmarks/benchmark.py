@@ -78,11 +78,8 @@ def main() -> int:
 
     runner.timeit(
         name='pet array',
-        stmt='f(ta=ta, rh=rh, v=va, tmrt=mrt_value, p=p)',
-        setup=(
-            f'from thermal_comfort import pet_static\n{array_setup}'
-            f'f = np.vectorize(pet_static, otypes=[float], cache=True)'
-        ),
+        stmt='pet_static(ta=ta, rh=rh, v=va, tmrt=mrt_value, p=p)',
+        setup=f'from thermal_comfort import pet_static\n{array_setup}',
     )
     return 0
 

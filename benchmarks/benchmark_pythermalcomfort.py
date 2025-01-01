@@ -7,25 +7,25 @@ def main() -> int:
     # TMRT
     runner.timeit(
         name='tmrt scalar',
-        stmt='t_mrt(tg=50, tdb=20, v=3, standard="ISO")',
-        setup='from pythermalcomfort.psychrometrics import t_mrt',
+        stmt='mean_radiant_tmp(tg=50, tdb=20, v=3, standard="ISO")',
+        setup='from pythermalcomfort.utilities import mean_radiant_tmp',
     )
 
     runner.timeit(
         name='tmrt array',
-        stmt='t_mrt(tg=tg, tdb=ta, v=va, standard="ISO")',
-        setup=f'from pythermalcomfort.psychrometrics import t_mrt\n{array_setup}',
+        stmt='mean_radiant_tmp(tg=tg, tdb=ta, v=va, standard="ISO")',
+        setup=f'from pythermalcomfort.utilities import mean_radiant_tmp\n{array_setup}',
     )
     # TWB
     runner.timeit(
         name='twb scalar',
-        stmt='t_wb(tdb=20, rh=50)',
-        setup='from pythermalcomfort.psychrometrics import t_wb',
+        stmt='wet_bulb_tmp(tdb=20, rh=50)',
+        setup='from pythermalcomfort.utilities import wet_bulb_tmp',
     )
     runner.timeit(
         name='twb array',
-        stmt='t_wb(tdb=ta, rh=rh)',
-        setup=f'from pythermalcomfort.psychrometrics import t_wb\n{array_setup}',
+        stmt='wet_bulb_tmp(tdb=ta, rh=rh)',
+        setup=f'from pythermalcomfort.utilities import wet_bulb_tmp\n{array_setup}',
     )
 
     # UTCI
@@ -50,11 +50,8 @@ def main() -> int:
 
     runner.timeit(
         name='pet array',
-        stmt='f(tdb=ta, tr=mrt_value, v=va, rh=rh, p_atm=p, met=1.37, clo=0.5)',
-        setup=(
-            f'from pythermalcomfort.models import pet_steady\n{array_setup}'
-            f'f = np.vectorize(pet_steady, otypes=[float], cache=True)'
-        ),
+        stmt='pet_steady(tdb=ta, tr=mrt_value, v=va, rh=rh, p_atm=p, met=1.37, clo=0.5)',  # noqa: E501
+        setup=f'from pythermalcomfort.models import pet_steady\n{array_setup}',
     )
     return 0
 
