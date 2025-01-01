@@ -91,6 +91,7 @@
 
 MODULE thermal_comfort_mod
    USE, INTRINSIC :: ieee_arithmetic
+   USE omp_lib
    IMPLICIT NONE
 
    PRIVATE
@@ -205,6 +206,7 @@ CONTAINS
       ! calculate vapor pressure from rh
       vpa = (rh*es_vectorized_wexler(Ta))/100.0
 
+      !$OMP PARALLEL DO
       do i = 1, size(ta)
          ! this never converges if a value is nan so  we need to check if any of the values are nan
          IF (ieee_is_nan(ta(i)) .OR. ieee_is_nan(rh(i)) .OR. ieee_is_nan(tmrt(i)) .OR. ieee_is_nan(v(i)) .OR. &
@@ -222,6 +224,7 @@ CONTAINS
          CALL pet_iteration(acl(i), adu(i), aeff(i), esw(i), facl(i), feff(i), p(i), rdcl(i), &
                             rdsk(i), rtv(i), ta(i), tcl(i), tsk(i), tx(i), vpts(i), wetsk(i))
       end do
+      !$OMP END PARALLEL DO
    END SUBROUTINE pet_static
 
 !------------------------------------------------------------------------------!
