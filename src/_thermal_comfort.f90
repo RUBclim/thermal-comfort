@@ -155,15 +155,15 @@ CONTAINS
       !
       !  Input arguments:
       ! ----------------
-      REAL(kind=8), INTENT(IN) :: ta     !< Air temperature           (°C)
-      REAL(kind=8), INTENT(IN) :: tmrt   !< Mean radiant temperature  (°C)
-      REAL(kind=8), INTENT(IN) :: v      !< Wind speed                (m/s)
-      REAL(kind=8), INTENT(IN) :: rh     !< relative humidity         (%)
-      REAL(kind=8), INTENT(IN) :: p      !< Air pressure              (hPa)
+      REAL(kind=8), INTENT(IN) :: ta(:)     !< Air temperature           (°C)
+      REAL(kind=8), INTENT(IN) :: tmrt(:)   !< Mean radiant temperature  (°C)
+      REAL(kind=8), INTENT(IN) :: v(:)      !< Wind speed                (m/s)
+      REAL(kind=8), INTENT(IN) :: rh(:)     !< relative humidity         (%)
+      REAL(kind=8), INTENT(IN) :: p(:)      !< Air pressure              (hPa)
       !
       !  Output arguments:
       ! ----------------
-      REAL(kind=8), INTENT(OUT) :: tx   !< PET  (°C)
+      REAL(kind=8), INTENT(OUT) :: tx(size(ta))   !< PET  (°C)
       !  former intent (out), disabled:
       !  - tsk        : Skin temperature              (°C)    real
       !  - tcl        : Clothing temperature          (°C)    real
@@ -173,9 +173,10 @@ CONTAINS
       !
       !  Internal variables:
       ! ----------------
-      REAL(kind=8) :: acl, adu, aeff, ere, erel, esw, facl, feff, rdcl, &
-                      rdsk, rtv, vpts, tsk, tcl, wetsk, vpa
-      !
+      INTEGER :: i
+      REAL(kind=8) :: vpa(size(ta)), ere(size(ta)), erel(size(ta)), rtv(size(ta)), acl(size(ta)), &
+                      adu(size(ta)), wetsk(size(ta)), vpts(size(ta)), tsk(size(ta)), tcl(size(ta)), &
+                      rdsk(size(ta)), rdcl(size(ta)), feff(size(ta)), facl(size(ta)), esw(size(ta)), aeff(size(ta))
       !  Optional arguments not supported, removed
       !  REAL(kind=8), INTENT ( in ), optional :: age, mbody, ht, work, eta, icl, fcl
       !  INTEGER, INTENT ( in ), optional :: pos, sex
@@ -191,13 +192,6 @@ CONTAINS
       !   IF ( .NOT. present( pos ) )   pos   =  1
       !   IF ( .NOT. present( sex ) )   sex   =  1
 
-      ! this never converges if a value is nan so  we need to check if any of the values are nan
-      IF (ieee_is_nan(ta) .OR. ieee_is_nan(rh) .OR. ieee_is_nan(tmrt) .OR. ieee_is_nan(v) .OR. &
-          ieee_is_nan(p)) THEN
-         tx = ieee_value(tx, ieee_quiet_nan)
-         RETURN
-      END IF
-
       !   MEMI configuration
       age = 35.
       mbody = 75.
@@ -209,17 +203,25 @@ CONTAINS
       pos = 1
       sex = 1
       ! calculate vapor pressure from rh
-      vpa = (rh*es(Ta))/100.0
+      vpa = (rh*es_vectorized_wexler(Ta))/100.0
 
-      ! !-- call subfunctions
-      CALL in_body(ere, erel, p, rtv, ta, vpa)
+      do i = 1, size(ta)
+         ! this never converges if a value is nan so  we need to check if any of the values are nan
+         IF (ieee_is_nan(ta(i)) .OR. ieee_is_nan(rh(i)) .OR. ieee_is_nan(tmrt(i)) .OR. ieee_is_nan(v(i)) .OR. &
+             ieee_is_nan(p(i))) THEN
+            tx(i) = ieee_value(tx(i), ieee_quiet_nan)
+            CYCLE
+         END IF
 
-      CALL heat_exch(acl, adu, aeff, ere, erel, esw, facl, feff, &
-                     p, rdcl, rdsk, ta, tcl, tmrt, tsk, v, vpa, vpts, wetsk)
+         !-- call subfunctions
+         CALL in_body(ere(i), erel(i), p(i), rtv(i), ta(i), vpa(i))
 
-      CALL pet_iteration(acl, adu, aeff, esw, facl, feff, p, rdcl, &
-                         rdsk, rtv, ta, tcl, tsk, tx, vpts, wetsk)
+         CALL heat_exch(acl(i), adu(i), aeff(i), ere(i), erel(i), esw(i), facl(i), feff(i), &
+                        p(i), rdcl(i), rdsk(i), ta(i), tcl(i), tmrt(i), tsk(i), v(i), vpa(i), vpts(i), wetsk(i))
 
+         CALL pet_iteration(acl(i), adu(i), aeff(i), esw(i), facl(i), feff(i), p(i), rdcl(i), &
+                            rdsk(i), rtv(i), ta(i), tcl(i), tsk(i), tx(i), vpts(i), wetsk(i))
+      end do
    END SUBROUTINE pet_static
 
 !------------------------------------------------------------------------------!

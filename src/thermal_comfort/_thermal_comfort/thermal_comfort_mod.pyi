@@ -7,7 +7,13 @@ import numpy.typing as npt
 T = TypeVar('T', bound=np.floating | np.integer)
 
 
-def pet_static(ta: float, rh: float, v: float, tmrt: float, p: float) -> float:
+def pet_static(
+        ta: npt.NDArray[T] | float,
+        rh: npt.NDArray[T] | float,
+        v: npt.NDArray[T] | float,
+        tmrt: npt.NDArray[T] | float,
+        p: npt.NDArray[T] | float,
+) -> npt.NDArray[Any]:
     """Calculate the Physiological Equivalent Temperature (PET).
 
     The PET is implemented as described in VDI 3787 Part 2. The fortran code was
@@ -31,9 +37,6 @@ def pet_static(ta: float, rh: float, v: float, tmrt: float, p: float) -> float:
     - ``fcl = 1.15``
     - ``pos = 1``
     - ``sex = 1``
-
-    The procedure does not work on arrays. It has to be wrapped in ``np.vectorize`` to
-    properly work on arrays.
 
     :param ta: air temperature in °C
     :param rh: relative humidity in %

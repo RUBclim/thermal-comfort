@@ -220,45 +220,6 @@ def test_pet_static(ta, rh, v, tmrt, expected):
         (float('nan'), float('nan'), float('nan'), 31, float('nan')),
         (float('nan'), float('nan'), float('nan'), float('nan'), 1013.25),
         (float('nan'), float('nan'), float('nan'), float('nan'), float('nan')),
-    ),
-)
-def test_pet_static_missing_value(ta, rh, v, tmrt, p):
-    assert math.isnan(pet_static(ta=ta, rh=rh, v=v, tmrt=tmrt, p=p))
-
-
-def test_pet_static_missing_value_mixed_array():
-    f = np.vectorize(pet_static, otypes=[float], cache=True)
-    result = f(
-        ta=np.array([20, float('nan')]),
-        rh=np.array([50, float('nan')]),
-        v=np.array([0.5, float('nan')]),
-        tmrt=np.array([20, float('nan')]),
-        p=np.array([1013.5, float('nan')]),
-    )
-    assert_array_almost_equal(result, [18, float('nan')], decimal=1)
-
-
-def test_pet_static_missing_value_mixed_series():
-    f = np.vectorize(pet_static, otypes=[float], cache=True)
-    df = pd.DataFrame({
-        'ta': pd.Series([20, float('nan')]),
-        'rh': pd.Series([50, float('nan')]),
-        'v': pd.Series([0.5, float('nan')]),
-        'tmrt': pd.Series([20, float('nan')]),
-        'p': pd.Series([1013.5, float('nan')]),
-    })
-    df['result'] = f(ta=df['ta'], rh=df['rh'], v=df['v'], tmrt=df['tmrt'], p=df['p'])
-    assert_series_equal(
-        left=df['result'],
-        right=pd.Series([18, float('nan')]),
-        atol=1,
-        check_names=False,
-    )
-
-
-@pytest.mark.parametrize(
-    ('ta', 'rh', 'v', 'tmrt', 'p'),
-    (
         (20, 50, 0.2, 31, None),
         (20, 50, 0.2, None, 1013.25),
         (20, 50, 0.2, None, None),
@@ -292,10 +253,39 @@ def test_pet_static_missing_value_mixed_series():
         (None, None, None, None, None),
     ),
 )
-def test_pet_static_values_is_none(ta, rh, v, tmrt, p):
-    with pytest.raises(TypeError) as exc_info:
-        pet_static(ta=ta, rh=rh, v=v, tmrt=tmrt, p=p)
-    assert "can't be converted to double" in exc_info.value.args[0]
+def test_pet_static_missing_value(ta, rh, v, tmrt, p):
+    assert math.isnan(pet_static(ta=ta, rh=rh, v=v, tmrt=tmrt, p=p)[0])
+
+
+def test_pet_static_missing_value_mixed_array():
+    result = pet_static(
+        ta=np.array([20, float('nan')]),
+        rh=np.array([50, float('nan')]),
+        v=np.array([0.5, float('nan')]),
+        tmrt=np.array([20, float('nan')]),
+        p=np.array([1013.5, float('nan')]),
+    )
+    assert_array_almost_equal(result, [18, float('nan')], decimal=1)
+
+
+def test_pet_static_missing_value_mixed_series():
+    df = pd.DataFrame({
+        'ta': pd.Series([20, float('nan')]),
+        'rh': pd.Series([50, float('nan')]),
+        'v': pd.Series([0.5, float('nan')]),
+        'tmrt': pd.Series([20, float('nan')]),
+        'p': pd.Series([1013.5, float('nan')]),
+    })
+    df['result'] = pet_static(
+        ta=df['ta'], rh=df['rh'],
+        v=df['v'], tmrt=df['tmrt'], p=df['p'],
+    )
+    assert_series_equal(
+        left=df['result'],
+        right=pd.Series([18, float('nan')]),
+        atol=1,
+        check_names=False,
+    )
 
 
 @pytest.mark.parametrize('f', [mrt, mrt_np])

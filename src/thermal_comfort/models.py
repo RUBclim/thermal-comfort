@@ -1,13 +1,14 @@
 import warnings
 from typing import Any
 from typing import TypeVar
+from typing import Union
 
 import numpy as np
 import numpy.typing as npt
 
 from ._thermal_comfort import thermal_comfort_mod
 
-T = TypeVar('T', bound=np.floating | np.integer)
+T = TypeVar('T', bound=Union[np.floating, np.integer])
 
 
 def utci_approx(
