@@ -36,7 +36,7 @@ def utci_approx(
     rh = np.array(rh)
 
     # 1. check for correct shape
-    if not (ta.ndim == 1 and tmrt.ndim == 1 and va.ndim == 1 and rh.ndim == 1):
+    if not (ta.ndim <= 1 and tmrt.ndim <= 1 and va.ndim <= 1 and rh.ndim <= 1):
         raise TypeError(
             'Only arrays with one dimension are allowed. '
             'Please reshape your array accordingly',
@@ -69,7 +69,12 @@ def utci_approx(
             stacklevel=2,
         )
 
-    return thermal_comfort_mod.utci_approx(ta=ta, tmrt=tmrt, va=va, rh=rh)
+    result = thermal_comfort_mod.utci_approx(ta=ta, tmrt=tmrt, va=va, rh=rh)
+    # check if we have a single value
+    if result.size == 1:
+        return result.item()
+    else:
+        return result
 
 
 def pet_static(
@@ -119,8 +124,8 @@ def pet_static(
 
     # 1. check for correct shape
     if not (
-            ta.ndim == 1 and rh.ndim == 1 and v.ndim == 1 and tmrt.ndim == 1
-            and p.ndim == 1
+            ta.ndim <= 1 and rh.ndim <= 1 and v.ndim <= 1 and tmrt.ndim <= 1
+            and p.ndim <= 1
     ):
         raise TypeError(
             'Only arrays with one dimension are allowed. '
@@ -130,4 +135,9 @@ def pet_static(
     if not (ta.size == rh.size == v.size == tmrt.size):
         raise ValueError('All arrays must have the same length')
 
-    return thermal_comfort_mod.pet_static(ta=ta, rh=rh, v=v, tmrt=tmrt, p=p)
+    result = thermal_comfort_mod.pet_static(ta=ta, rh=rh, v=v, tmrt=tmrt, p=p)
+    # check if we have a single value
+    if result.size == 1:
+        return result.item()
+    else:
+        return result
