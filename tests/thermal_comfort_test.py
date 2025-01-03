@@ -159,6 +159,32 @@ def test_utci_approx_warning_raised_when_outside_of_range_va(va):
     )
 
 
+@pytest.mark.parametrize('shape', [(2, 1), (2, 1, 1)])
+def test_utci_approx_shapes_incorrect(shape):
+    ta = np.array([20.5, 30.5]).reshape(shape)
+    tmrt = np.array([50.5, 70.5]).reshape(shape)
+    va = np.array([1.5, 2.5]).reshape(shape)
+    rh = np.array([50.5, 60.5]).reshape(shape)
+    with pytest.raises(TypeError) as excinfo:
+        utci_approx(ta=ta, tmrt=tmrt, va=va, rh=rh)
+
+    assert excinfo.value.args[0] == (
+        'Only arrays with one dimension are allowed. '
+        'Please reshape your array accordingly'
+    )
+
+
+def test_utci_approx_array_sizes_differ():
+    ta = np.array([20.5])
+    tmrt = np.array([50.5, 70.5])
+    va = np.array([1.5, 2.5])
+    rh = np.array([50.5, 60.5])
+    with pytest.raises(ValueError) as excinfo:
+        utci_approx(ta=ta, tmrt=tmrt, va=va, rh=rh)
+
+    assert excinfo.value.args[0] == 'All arrays must have the same length'
+
+
 def _rh(vpa, ta):
     """we changed the interface of pet to use relative humidity instead of
     vapour pressure, hence we need to calculate the relative humidity from
@@ -286,6 +312,34 @@ def test_pet_static_missing_value_mixed_series():
         atol=1,
         check_names=False,
     )
+
+
+@pytest.mark.parametrize('shape', [(2, 1), (2, 1, 1)])
+def test_pet_static_shapes_incorrect(shape):
+    ta = np.array([20.5, 30.5]).reshape(shape)
+    tmrt = np.array([50.5, 70.5]).reshape(shape)
+    v = np.array([1.5, 2.5]).reshape(shape)
+    rh = np.array([50.5, 60.5]).reshape(shape)
+    p = np.array([1013.5, 1010.5]).reshape(shape)
+    with pytest.raises(TypeError) as excinfo:
+        pet_static(ta=ta, rh=rh, v=v, tmrt=tmrt, p=p)
+
+    assert excinfo.value.args[0] == (
+        'Only arrays with one dimension are allowed. '
+        'Please reshape your array accordingly'
+    )
+
+
+def test_pet_static_array_sizes_differ():
+    ta = np.array([20.5])
+    tmrt = np.array([50.5, 70.5])
+    v = np.array([1.5, 2.5])
+    rh = np.array([50.5, 60.5])
+    p = np.array([1013.5, 1010.5])
+    with pytest.raises(ValueError) as excinfo:
+        pet_static(ta=ta, rh=rh, v=v, tmrt=tmrt, p=p)
+
+    assert excinfo.value.args[0] == 'All arrays must have the same length'
 
 
 @pytest.mark.parametrize('f', [mrt, mrt_np])
