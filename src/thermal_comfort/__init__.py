@@ -3,6 +3,7 @@ from thermal_comfort.models import pet_static
 from thermal_comfort.models import utci_approx
 from thermal_comfort.mrt import mrt
 from thermal_comfort.mrt import mrt_np
+from thermal_comfort.mrt import twb
 
 
 # we expose the native fortran function as private functions if we want to ignore
@@ -10,9 +11,9 @@ from thermal_comfort.mrt import mrt_np
 _utci_approx = thermal_comfort_mod.utci_approx
 _pet_static = thermal_comfort_mod.pet_static
 _mrt = thermal_comfort_mod.mrt
-twb = thermal_comfort_mod.twb
+_twb = thermal_comfort_mod.twb
 
 __all__ = [
     'utci_approx', '_utci_approx', 'pet_static',
-    '_pet_static', 'mrt_np', 'mrt', '_mrt', 'twb',
+    '_pet_static', 'mrt_np', 'mrt', '_mrt', 'twb', '_twb',
 ]

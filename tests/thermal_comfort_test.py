@@ -359,12 +359,13 @@ def test_tmrt_scalar_values(tg, va, ta, d, expected, f):
     assert pytest.approx(f(tg=tg, va=va, ta=ta, d=d, e=0.95), abs=1e-1) == expected
 
 
-def test_tmrt_array_values_default_d_e():
+@pytest.mark.parametrize('f', [mrt, mrt_np])
+def test_tmrt_array_values_default_d_e(f):
     tg = np.array([55, 53.2, 55])
     va = np.array([0.3, 0.3, 0.1])
     ta = np.array([30, 30, 30])
     expected = np.array([74.4, 71.6, 55.0])
-    assert pytest.approx(mrt_np(tg=tg, va=va, ta=ta), abs=1e-1) == expected
+    assert pytest.approx(f(tg=tg, va=va, ta=ta), abs=1e-1) == expected
 
 
 @pytest.mark.parametrize('f', [mrt, mrt_np])
@@ -382,18 +383,20 @@ def test_tmrt_array_values(f):
     )
 
 
+@pytest.mark.parametrize('f', [mrt, mrt_np])
 @pytest.mark.parametrize('d', (0, -0.01, -100.5))
-def test_mrt_d_outside_of_allowed_range(d):
+def test_mrt_d_outside_of_allowed_range(f, d):
     with pytest.raises(ValueError) as excinfo:
-        mrt(tg=70, va=3, ta=20, d=d)
+        f(tg=70, va=3, ta=20, d=d)
 
     assert excinfo.value.args[0] == 'The globe diameter (d) must be positive'
 
 
+@pytest.mark.parametrize('f', [mrt, mrt_np])
 @pytest.mark.parametrize('e', (-0.01, 1.1))
-def test_mrt_e_outside_of_allowed_range(e):
+def test_mrt_e_outside_of_allowed_range(f, e):
     with pytest.raises(ValueError) as excinfo:
-        mrt(tg=70, va=3, ta=20, e=e)
+        f(tg=70, va=3, ta=20, e=e)
 
     assert excinfo.value.args[0] == 'The emissivity (e) must be between 0 and 1'
 
@@ -431,3 +434,32 @@ def test_mrt_array_sizes_differ():
 )
 def test_twb_scalar_values(ta, rh, expected):
     assert pytest.approx(twb(ta=ta, rh=rh), abs=1e-1) == expected
+
+
+def test_twb_array_values():
+    ta = np.array([20, 25])
+    rh = np.array([50, 55])
+    expected = np.array([13.7, 18.8])
+    assert_array_almost_equal(twb(ta=ta, rh=rh), expected, decimal=1)
+
+
+@pytest.mark.parametrize('shape', ((2, 1), (2, 1, 1)))
+def test_twb_shapes_incorrect(shape):
+    ta = np.array([20, 25]).reshape(shape)
+    rh = np.array([50, 55]).reshape(shape)
+    with pytest.raises(TypeError) as excinfo:
+        twb(ta=ta, rh=rh)
+
+    assert excinfo.value.args[0] == (
+        'Only arrays with one dimension are allowed. '
+        'Please reshape your array accordingly'
+    )
+
+
+def test_twb_array_sizes_differ():
+    ta = np.array([20])
+    rh = np.array([50, 55])
+    with pytest.raises(ValueError) as excinfo:
+        twb(ta=ta, rh=rh)
+
+    assert excinfo.value.args[0] == 'All arrays must have the same length'

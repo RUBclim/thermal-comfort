@@ -98,6 +98,14 @@ def mrt_np(
         d = np.full_like(tg, d, dtype=float)
     if isinstance(e, float):
         e = np.full_like(tg, e, dtype=float)
+
+    # check for value ranges
+    if np.any(d <= 0):
+        raise ValueError('The globe diameter (d) must be positive')
+
+    if np.any((e < 0) | (e > 1)):
+        raise ValueError('The emissivity (e) must be between 0 and 1')
+
     # we need to mask the values and apply the correct function to these values
     hcg_natural = np.power(1.4 * (np.abs(tg - ta) / 0.15), 0.25)
     hcg_forced = (6.3 * (np.power(va, 0.6) / np.power(d, 0.4)))
@@ -174,6 +182,31 @@ def mrt(
         raise ValueError('The emissivity (e) must be between 0 and 1')
 
     result = thermal_comfort_mod.mrt(tg=tg, va=va, ta=ta, d=d, e=e)
+    # check if we have a single value
+    if result.size == 1:
+        return result.item()
+    else:
+        return result
+
+
+def twb(
+        ta: npt.ArrayLike,
+        rh: npt.ArrayLike,
+) -> npt.NDArray[Any]:
+    ta = np.array(ta)
+    rh = np.array(rh)
+
+    # 1. check for correct shape
+    if not (ta.ndim <= 1 and rh.ndim <= 1):
+        raise TypeError(
+            'Only arrays with one dimension are allowed. '
+            'Please reshape your array accordingly',
+        )
+    # 2. check for same length
+    if not (ta.size == rh.size):
+        raise ValueError('All arrays must have the same length')
+
+    result = thermal_comfort_mod.twb(ta=ta, rh=rh)
     # check if we have a single value
     if result.size == 1:
         return result.item()
