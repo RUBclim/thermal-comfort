@@ -141,3 +141,28 @@ def pet_static(
         return result.item()
     else:
         return result
+
+
+def heat_index(
+        ta: npt.ArrayLike,
+        rh: npt.ArrayLike,
+) -> npt.NDArray[Any]:
+    ta = np.array(ta)
+    rh = np.array(rh)
+
+    # 1. check for correct shape
+    if not (ta.ndim <= 1 and rh.ndim <= 1):
+        raise TypeError(
+            'Only arrays with one dimension are allowed. '
+            'Please reshape your array accordingly',
+        )
+    # 2. check for same length
+    if not (ta.size == rh.size):
+        raise ValueError('All arrays must have the same length')
+
+    result = thermal_comfort_mod.heat_index(ta=ta, rh=rh)
+    # check if we have a single value
+    if result.size == 1:
+        return result.item()
+    else:
+        return result

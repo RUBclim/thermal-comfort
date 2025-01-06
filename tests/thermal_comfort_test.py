@@ -5,6 +5,7 @@ import pandas as pd
 import pytest
 from numpy.testing import assert_array_almost_equal
 from pandas.testing import assert_series_equal
+from thermal_comfort import heat_index
 from thermal_comfort import mrt
 from thermal_comfort import mrt_np
 from thermal_comfort import pet_static
@@ -12,7 +13,7 @@ from thermal_comfort import twb
 from thermal_comfort import utci_approx
 
 
-def load_test_data():
+def load_utci_test_data():
     with open('testing/utci_references.txt') as f:
         # skip the headers
         lines = f.readlines()[35:]
@@ -23,13 +24,24 @@ def load_test_data():
     return values
 
 
+def load_heat_index_test_data():
+    with open('testing/heat_index_reference.csv') as f:
+        # skip the headers
+        lines = f.readlines()[35:]
+        values = []
+        for line in lines:
+            values.append([float(i) for i in line.split(',')])
+
+    return values
+
+
 @pytest.mark.filterwarnings('ignore:encountered a value for')
 @pytest.mark.parametrize(
     (
         'ta', 'd_tmrt', 'va', 'rh', 'pa', 'offset',
         'utci', 'utci_table', 'utci_polynomial',
     ),
-    (*load_test_data(),),
+    (*load_utci_test_data(),),
 )
 def test_utci_approx(
         ta,
@@ -74,7 +86,7 @@ def test_utci_approx_missing_value(ta, tmrt, va, rh):
 
 @pytest.mark.filterwarnings('ignore:encountered a value for')
 def test_utci_approx_with_vectors():
-    data = np.array(load_test_data())
+    data = np.array(load_utci_test_data())
     ta = data[:, 0]
     tmrt = data[:, 1] + data[:, 0]
     va = data[:, 2]
@@ -91,7 +103,7 @@ def test_utci_approx_with_vectors():
 @pytest.mark.filterwarnings('ignore:encountered a value for')
 def test_utci_approx_with_pandas_series():
     df = pd.DataFrame(
-        load_test_data(),
+        load_utci_test_data(),
         columns=[
             'Ta', 'Tr-Ta', 'va', 'rH', 'pa',
             'Offset', 'UTCI', 'UTCI_Table', 'UTCI_polynomial',
@@ -461,5 +473,57 @@ def test_twb_array_sizes_differ():
     rh = np.array([50, 55])
     with pytest.raises(ValueError) as excinfo:
         twb(ta=ta, rh=rh)
+
+    assert excinfo.value.args[0] == 'All arrays must have the same length'
+
+
+def _c2f(celsius):
+    """convert celsius to fahrenheit"""
+    return celsius * 9 / 5 + 32
+
+
+def _f2c(fahrenheit):
+    """convert fahrenheit to celsius"""
+    return (fahrenheit - 32) * 5 / 9
+
+
+@pytest.mark.parametrize(
+    ('ta', 'rh', 'expected'),
+    (*load_heat_index_test_data(),),
+)
+def test_heat_index_scalar_values(ta, rh, expected):
+    assert _c2f(heat_index(ta=_f2c(ta), rh=rh)) == pytest.approx(expected, abs=1)
+
+
+@pytest.mark.parametrize(
+    ('ta', 'rh'),
+    (
+        pytest.param(26, 60, id='ta out of valid range'),
+        pytest.param(40, 35, id='rh out of valid range'),
+        pytest.param(10, 35, id='both out of valid range'),
+    ),
+)
+def test_heat_index_scalar_values_out_of_range(ta, rh):
+    assert math.isnan(heat_index(ta=ta, rh=rh))
+
+
+@pytest.mark.parametrize('shape', ((2, 1), (2, 1, 1)))
+def test_heat_index_shapes_incorrect(shape):
+    ta = np.array([20, 25]).reshape(shape)
+    rh = np.array([50, 55]).reshape(shape)
+    with pytest.raises(TypeError) as excinfo:
+        heat_index(ta=ta, rh=rh)
+
+    assert excinfo.value.args[0] == (
+        'Only arrays with one dimension are allowed. '
+        'Please reshape your array accordingly'
+    )
+
+
+def test_heat_index_array_sizes_differ():
+    ta = np.array([20])
+    rh = np.array([50, 55])
+    with pytest.raises(ValueError) as excinfo:
+        heat_index(ta=ta, rh=rh)
 
     assert excinfo.value.args[0] == 'All arrays must have the same length'

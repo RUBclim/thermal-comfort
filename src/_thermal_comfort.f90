@@ -116,6 +116,17 @@ MODULE thermal_comfort_mod
            7.0229056E-10, &
            -1.8680009E-13, &
            2.7150305/)
+
+   ! used for the heat index calculation
+   REAL(kind=8), PARAMETER :: c1 = -8.78469475556
+   REAL(kind=8), PARAMETER :: c2 = 1.61139411
+   REAL(kind=8), PARAMETER :: c3 = 2.33854883889
+   REAL(kind=8), PARAMETER :: c4 = -0.14611605
+   REAL(kind=8), PARAMETER :: c5 = -0.012308094
+   REAL(kind=8), PARAMETER :: c6 = -0.0164248277778
+   REAL(kind=8), PARAMETER :: c7 = 0.002211732
+   REAL(kind=8), PARAMETER :: c8 = 0.00072546
+   REAL(kind=8), PARAMETER :: c9 = -0.000003582
 !
 !   Internal variables:
 ! ----------------
@@ -136,6 +147,7 @@ MODULE thermal_comfort_mod
    PUBLIC UTCI_approx
    PUBLIC mrt
    PUBLIC twb
+   public heat_index
 
 CONTAINS
 
@@ -917,4 +929,43 @@ CONTAINS
             atan(ta + rh) - atan(rh - 1.676331) + 0.00391838* &
             (rh)**1.5*atan(0.023101*rh) - 4.686035
    END FUNCTION twb
+
+   FUNCTION heat_index(ta, rh)
+      ! https://www.weather.gov/ama/heatindex
+      ! https://www.weather.gov/media/ffc/ta_htindx.PDF
+      ! Rothfusz LP (1990) The heat index “equation” (or, more than you ever
+      ! https://link.springer.com/article/10.1007/s00484-021-02105-0  (Formula 6)
+      ! here a range between 14 - 85°C is suggested and 20 - 80 % relhum (table 3)
+      ! https://link.springer.com/article/10.1007/s00484-011-0453-2 sets a scale for risks,
+      ! however, there are no "no risk" categories
+      ! They also define a °C version of the index
+      ! https://www.weather.gov/safety/heat-index
+      ! https://s.campbellsci.com/documents/us/technical-papers/heatindx.pdf
+      ! https://www.noaa.gov/jetstream/synoptic/heat-index
+      ! Steadman R.G. The assessment of sultriness. Part I: A temperature-humidity index
+      ! based on human physiology and clothing. J. Appl. Meteorol. 1979;18:861–873.
+      ! doi: 10.1175/1520-0450(1979)018&#x0003c;0861:TAOSPI&#x0003e;2.0.CO;2. [
+      IMPLICIT NONE
+      REAL(kind=8), INTENT(IN) :: ta(:), rh(:)
+      REAL(kind=8) :: heat_index(size(ta))
+      REAL(kind=8) :: missing(size(ta))
+      missing = ieee_value(ta, ieee_quiet_nan)
+
+      ! coefficients for °C are defined here: https://en.wikipedia.org/wiki/Heat_index
+      ! or here: https://pmc.ncbi.nlm.nih.gov/articles/PMC8296236/
+      ! Fahrenheit Formula + conversion to and from °F
+      !  -42.379 + 2.04901523*ta_f + 10.14333127*rh &
+      !  - 0.22475541*ta_f*rh - 6.83783D-3*ta_f**2 &
+      !  - 5.481717D-2*rh**2 + 1.22874D-3*ta_f**2*rh &
+      !  + 8.5282D-4*ta_f*rh**2 - 1.99D-6*ta_f**2*rh**2, &
+      heat_index = MERGE( &
+                   missing, &
+                   c1 + c2*ta + c3*rh + c4*ta*rh + &
+                   c5*ta**2 + c6*rh**2 + &
+                   c7*ta**2*rh + c8*ta*rh**2 + &
+                   c9*ta**2*rh**2, &
+                   (ta < 26.666) .OR. (rh < 40) &
+                   )
+
+   END FUNCTION heat_index
 END MODULE thermal_comfort_mod

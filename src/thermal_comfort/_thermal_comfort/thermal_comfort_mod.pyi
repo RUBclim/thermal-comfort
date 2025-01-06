@@ -111,3 +111,10 @@ def twb(
         rh: npt.NDArray[T] | float,
 ) -> npt.NDArray[T]:
     ...
+
+
+def heat_index(
+        ta: npt.NDArray[T] | float,
+        rh: npt.NDArray[T] | float,
+) -> npt.NDArray[T]:
+    ...
