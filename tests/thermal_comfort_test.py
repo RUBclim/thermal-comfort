@@ -382,6 +382,46 @@ def test_tmrt_array_values(f):
     )
 
 
+@pytest.mark.parametrize('d', (0, -0.01, -100.5))
+def test_mrt_d_outside_of_allowed_range(d):
+    with pytest.raises(ValueError) as excinfo:
+        mrt(tg=70, va=3, ta=20, d=d)
+
+    assert excinfo.value.args[0] == 'The globe diameter (d) must be positive'
+
+
+@pytest.mark.parametrize('e', (-0.01, 1.1))
+def test_mrt_e_outside_of_allowed_range(e):
+    with pytest.raises(ValueError) as excinfo:
+        mrt(tg=70, va=3, ta=20, e=e)
+
+    assert excinfo.value.args[0] == 'The emissivity (e) must be between 0 and 1'
+
+
+@pytest.mark.parametrize('shape', ((2, 1), (2, 1, 1)))
+def test_mrt_shapes_incorrect(shape):
+    tg = np.array([50.5, 70.5]).reshape(shape)
+    ta = np.array([20.5, 30.5]).reshape(shape)
+    va = np.array([1.5, 2.5]).reshape(shape)
+    with pytest.raises(TypeError) as excinfo:
+        mrt(tg=tg, va=va, ta=ta)
+
+    assert excinfo.value.args[0] == (
+        'Only arrays with one dimension are allowed. '
+        'Please reshape your array accordingly'
+    )
+
+
+def test_mrt_array_sizes_differ():
+    tg = np.array([50.5])
+    ta = np.array([20.5, 30.5])
+    va = np.array([1.5, 2.5])
+    with pytest.raises(ValueError) as excinfo:
+        mrt(tg=tg, va=va, ta=ta)
+
+    assert excinfo.value.args[0] == 'All arrays must have the same length'
+
+
 @pytest.mark.parametrize(
     ('ta', 'rh', 'expected'),
     (
