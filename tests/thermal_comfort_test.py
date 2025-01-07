@@ -6,6 +6,7 @@ import pytest
 from numpy.testing import assert_array_almost_equal
 from pandas.testing import assert_series_equal
 from thermal_comfort import heat_index
+from thermal_comfort import heat_index_extended
 from thermal_comfort import mrt
 from thermal_comfort import mrt_np
 from thermal_comfort import pet_static
@@ -487,22 +488,38 @@ def _f2c(fahrenheit):
     return (fahrenheit - 32) * 5 / 9
 
 
+@pytest.mark.parametrize('f', (heat_index, heat_index_extended))
 @pytest.mark.parametrize(
     ('ta', 'rh', 'expected'),
     (*load_heat_index_test_data(),),
 )
-def test_heat_index_scalar_values(ta, rh, expected):
-    assert _c2f(heat_index(ta=_f2c(ta), rh=rh)) == pytest.approx(expected, abs=1)
+def test_heat_index_scalar_values(f, ta, rh, expected):
+    assert round(_c2f(f(ta=_f2c(ta), rh=rh))) == pytest.approx(expected, abs=1)
 
 
+@pytest.mark.parametrize(
+    ('ta', 'rh', 'expected'),
+    (
+        (35, 10, 32.333),
+        (30, 90, 40.774),
+        # with fahrenheit conditions
+        (_f2c(95), 10, 32.333),
+        (_f2c(86), 90, 40.774),
+    ),
+)
+def test_heat_index_extended_scalar_values_extended_range(ta, rh, expected):
+    assert heat_index_extended(ta=ta, rh=rh) == pytest.approx(expected, abs=1e-3)
+
+
+@pytest.mark.parametrize('f', (heat_index, heat_index_extended))
 @pytest.mark.filterwarnings('ignore:encountered a value for')
-def test_heat_index_array():
+def test_heat_index_array(f):
     data = np.array(load_heat_index_test_data())
     ta = data[:, 0]
     rh = data[:, 1]
     expected = data[:, 2]
 
-    result = _c2f(heat_index(ta=_f2c(ta), rh=rh))
+    result = _c2f(f(ta=_f2c(ta), rh=rh))
     assert_array_almost_equal(result, expected, decimal=0)
 
 
@@ -518,12 +535,25 @@ def test_heat_index_scalar_values_out_of_range(ta, rh):
     assert math.isnan(heat_index(ta=ta, rh=rh))
 
 
+@pytest.mark.parametrize(
+    ('ta', 'rh', 'expected'),
+    (
+        pytest.param(26, 60, 26.222),
+        pytest.param(40, 35, 45.528),
+        pytest.param(10, 35, 7.969),
+    ),
+)
+def test_heat_index_extented_scalar_values_in_extended_range(ta, rh, expected):
+    assert heat_index_extended(ta=ta, rh=rh) == pytest.approx(expected, abs=1e-3)
+
+
+@pytest.mark.parametrize('f', (heat_index, heat_index_extended))
 @pytest.mark.parametrize('shape', ((2, 1), (2, 1, 1)))
-def test_heat_index_shapes_incorrect(shape):
+def test_heat_index_shapes_incorrect(f, shape):
     ta = np.array([20, 25]).reshape(shape)
     rh = np.array([50, 55]).reshape(shape)
     with pytest.raises(TypeError) as excinfo:
-        heat_index(ta=ta, rh=rh)
+        f(ta=ta, rh=rh)
 
     assert excinfo.value.args[0] == (
         'Only arrays with one dimension are allowed. '
@@ -531,10 +561,11 @@ def test_heat_index_shapes_incorrect(shape):
     )
 
 
-def test_heat_index_array_sizes_differ():
+@pytest.mark.parametrize('f', (heat_index, heat_index_extended))
+def test_heat_index_array_sizes_differ(f):
     ta = np.array([20])
     rh = np.array([50, 55])
     with pytest.raises(ValueError) as excinfo:
-        heat_index(ta=ta, rh=rh)
+        f(ta=ta, rh=rh)
 
     assert excinfo.value.args[0] == 'All arrays must have the same length'
