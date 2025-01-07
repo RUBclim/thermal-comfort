@@ -126,7 +126,7 @@ MODULE thermal_comfort_mod
    REAL(8), PARAMETER :: g5 = 7.0229056e-10
    REAL(8), PARAMETER :: g6 = -1.8680009e-13
    REAL(8), PARAMETER :: g7 = 2.7150305
-                
+
    ! used for the heat index calculation
    REAL(kind=8), PARAMETER :: c1 = -8.78469475556
    REAL(kind=8), PARAMETER :: c2 = 1.61139411
@@ -938,7 +938,10 @@ CONTAINS
       !$OMP SECTIONS
       !$OMP SECTION
       hcg_natural = (1.4*(ABS(tg - ta)/0.15)**0.25)
+      !$OMP SECTION
       hcg_forced = (6.3*((v**0.6)/(d**0.4)))
+      !$OMP END SECTIONS
+      !$OMP END PARALLEL
       mrt = MERGE( &
             tmrt_natural_convection(ta, tg, d, e), &
             tmrt_forced_convection(ta, tg, v, d, e), &
@@ -985,6 +988,7 @@ CONTAINS
       !  - 0.22475541*ta_f*rh - 6.83783D-3*ta_f**2 &
       !  - 5.481717D-2*rh**2 + 1.22874D-3*ta_f**2*rh &
       !  + 8.5282D-4*ta_f*rh**2 - 1.99D-6*ta_f**2*rh**2, &
+      !$OMP PARALLEL WORKSHARE
       heat_index = MERGE( &
                    missing, &
                    c1 + c2*ta + c3*rh + c4*ta*rh + &
@@ -993,6 +997,7 @@ CONTAINS
                    c9*ta**2*rh**2, &
                    (ta < 26.666) .OR. (rh < 40) &
                    )
+      !$OMP END PARALLEL WORKSHARE
 
    END FUNCTION heat_index
 
@@ -1001,7 +1006,9 @@ CONTAINS
       IMPLICIT NONE
       REAL(kind=8), INTENT(IN) :: celsius(:)
       REAL(kind=8) :: c2f(size(celsius))
+      !$OMP PARALLEL WORKSHARE
       c2f = ((9.0/5.0)*celsius) + 32
+      !$OMP END PARALLEL WORKSHARE
    END FUNCTION c2f
 
    FUNCTION f2c(fahrenheit)
@@ -1009,7 +1016,9 @@ CONTAINS
       IMPLICIT NONE
       REAL(kind=8), INTENT(IN) :: fahrenheit(:)
       REAL(kind=8) :: f2c(size(fahrenheit))
+      !$OMP PARALLEL WORKSHARE
       f2c = (5.0/9.0)*(fahrenheit - 32.0)
+      !$OMP END PARALLEL WORKSHARE
    END FUNCTION f2c
 
    FUNCTION heat_index_extended(ta, rh)
@@ -1021,6 +1030,7 @@ CONTAINS
 
       !convert °C to °F since HI is defined in Fahrenheit
       ta_f = c2f(ta)
+      !$OMP PARALLEL WORKSHARE
       heat_index_extended = 0.5*(ta_f + 61.0 + ((ta_f - 68.0)*1.2) + (rh*0.094))
       heat_index_extended = MERGE( &
                             -42.379 + 2.04901523*ta_f + 10.14333127*rh &
@@ -1043,6 +1053,7 @@ CONTAINS
                             rh > 85.0 .AND. ta_f > 80.0 .AND. ta_f < 87.0 &
                             )
       ! convert back to °C
+      !$OMP END PARALLEL WORKSHARE
       heat_index_extended = f2c(heat_index_extended)
    END FUNCTION heat_index_extended
 
