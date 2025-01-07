@@ -28,6 +28,18 @@ def main() -> int:
         setup=f'from pythermalcomfort.utilities import wet_bulb_tmp\n{array_setup}',
     )
 
+    # Heat Index
+    runner.timeit(
+        name='heat index scalar',
+        stmt='heat_index(tdb=20, rh=50)',
+        setup='from pythermalcomfort.models import heat_index',
+    )
+    runner.timeit(
+        name='heat index array',
+        stmt='heat_index(tdb=ta, rh=rh)',
+        setup=f'from pythermalcomfort.models import heat_index\n{array_setup}',
+    )
+
     # UTCI
     runner.timeit(
         name='utci scalar',
