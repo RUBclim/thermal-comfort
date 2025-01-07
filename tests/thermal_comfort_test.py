@@ -495,6 +495,17 @@ def test_heat_index_scalar_values(ta, rh, expected):
     assert _c2f(heat_index(ta=_f2c(ta), rh=rh)) == pytest.approx(expected, abs=1)
 
 
+@pytest.mark.filterwarnings('ignore:encountered a value for')
+def test_heat_index_array():
+    data = np.array(load_heat_index_test_data())
+    ta = data[:, 0]
+    rh = data[:, 1]
+    expected = data[:, 2]
+
+    result = _c2f(heat_index(ta=_f2c(ta), rh=rh))
+    assert_array_almost_equal(result, expected, decimal=0)
+
+
 @pytest.mark.parametrize(
     ('ta', 'rh'),
     (
