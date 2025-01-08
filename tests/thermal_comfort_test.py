@@ -55,7 +55,7 @@ def test_utci_approx(
         utci_polynomial,
 ):
     assert pytest.approx(
-        utci_approx(ta=ta, tmrt=d_tmrt + ta, va=va, rh=rh),
+        utci_approx(ta=ta, tmrt=d_tmrt + ta, v=va, rh=rh),
         abs=1e-1,
     ) == utci_polynomial
 
@@ -81,7 +81,7 @@ def test_utci_approx(
     ),
 )
 def test_utci_approx_missing_value(ta, tmrt, va, rh):
-    assert math.isnan(utci_approx(ta=ta, tmrt=tmrt, va=va, rh=rh))
+    assert math.isnan(utci_approx(ta=ta, tmrt=tmrt, v=va, rh=rh))
 
 
 @pytest.mark.filterwarnings('ignore:encountered a value for')
@@ -89,12 +89,12 @@ def test_utci_approx_with_vectors():
     data = np.array(load_utci_test_data())
     ta = data[:, 0]
     tmrt = data[:, 1] + data[:, 0]
-    va = data[:, 2]
+    v = data[:, 2]
     rh = data[:, 3]
     expected = data[:, 8]
 
     assert_array_almost_equal(
-        utci_approx(ta=ta, tmrt=tmrt, va=va, rh=rh),
+        utci_approx(ta=ta, tmrt=tmrt, v=v, rh=rh),
         expected,
         decimal=1,
     )
@@ -111,7 +111,7 @@ def test_utci_approx_with_pandas_series():
     )
     df['tmrt'] = df['Ta'] + df['Tr-Ta']
     df['utci_calc'] = utci_approx(
-        ta=df['Ta'], tmrt=df['tmrt'], va=df['va'], rh=df['rH'],
+        ta=df['Ta'], tmrt=df['tmrt'], v=df['va'], rh=df['rH'],
     )
     assert_series_equal(
         left=df['UTCI_polynomial'],
@@ -125,7 +125,7 @@ def test_utci_approx_with_pandas_series():
 def test_utci_approx_native_vectorized_2d_array():
     ta = np.array([[-49.9, -49.8], [-49.2, -49]])
     tmrt = np.array([[-16.7 + -49.9, -14.6 + -49.8], [-5.6 + -49.2, -17.2 + -49]])
-    va = np.array([[8, 4], [8, 5]])
+    v = np.array([[8, 4], [8, 5]])
     rh = np.array([[78, 77], [100, 98]])
     expected = np.array([[-75.7, -63.5], [-73.9, -66.1]])
 
@@ -133,7 +133,7 @@ def test_utci_approx_native_vectorized_2d_array():
         utci_approx(
             ta=ta,
             tmrt=tmrt,
-            va=va,
+            v=v,
             rh=rh,
         ).reshape((2, 2), order='F'),
         expected,
@@ -144,7 +144,7 @@ def test_utci_approx_native_vectorized_2d_array():
 @pytest.mark.parametrize('ta', (-50.1, 50.1))
 def test_utci_approx_warning_raised_when_outside_of_range_ta(ta):
     with pytest.warns(RuntimeWarning) as w:
-        utci_approx(ta=ta, tmrt=60, va=1, rh=50)
+        utci_approx(ta=ta, tmrt=60, v=1, rh=50)
 
     assert w[0].message.args[0] == (
         'encountered a value for ta outside of the defined range of -50 <= ta <= 50 °C'
@@ -154,7 +154,7 @@ def test_utci_approx_warning_raised_when_outside_of_range_ta(ta):
 @pytest.mark.parametrize('tmrt', (-10.1, 90.1))
 def test_utci_approx_warning_raised_when_outside_of_range_tmrt(tmrt):
     with pytest.warns(RuntimeWarning) as w:
-        utci_approx(ta=20, tmrt=tmrt, va=1, rh=50)
+        utci_approx(ta=20, tmrt=tmrt, v=1, rh=50)
 
     assert w[0].message.args[0] == (
         'encountered a value for tmrt outside of the defined range of '
@@ -165,10 +165,10 @@ def test_utci_approx_warning_raised_when_outside_of_range_tmrt(tmrt):
 @pytest.mark.parametrize('va', (0.49, 17.1))
 def test_utci_approx_warning_raised_when_outside_of_range_va(va):
     with pytest.warns(RuntimeWarning) as w:
-        utci_approx(ta=20, tmrt=60, va=va, rh=50)
+        utci_approx(ta=20, tmrt=60, v=va, rh=50)
 
     assert w[0].message.args[0] == (
-        'encountered a value for va outside of the defined range of 0.5 <= va <= 17'
+        'encountered a value for v outside of the defined range of 0.5 <= v <= 17'
     )
 
 
@@ -176,10 +176,10 @@ def test_utci_approx_warning_raised_when_outside_of_range_va(va):
 def test_utci_approx_shapes_incorrect(shape):
     ta = np.array([20.5, 30.5]).reshape(shape)
     tmrt = np.array([50.5, 70.5]).reshape(shape)
-    va = np.array([1.5, 2.5]).reshape(shape)
+    v = np.array([1.5, 2.5]).reshape(shape)
     rh = np.array([50.5, 60.5]).reshape(shape)
     with pytest.raises(TypeError) as excinfo:
-        utci_approx(ta=ta, tmrt=tmrt, va=va, rh=rh)
+        utci_approx(ta=ta, tmrt=tmrt, v=v, rh=rh)
 
     assert excinfo.value.args[0] == (
         'Only arrays with one dimension are allowed. '
@@ -190,10 +190,10 @@ def test_utci_approx_shapes_incorrect(shape):
 def test_utci_approx_array_sizes_differ():
     ta = np.array([20.5])
     tmrt = np.array([50.5, 70.5])
-    va = np.array([1.5, 2.5])
+    v = np.array([1.5, 2.5])
     rh = np.array([50.5, 60.5])
     with pytest.raises(ValueError) as excinfo:
-        utci_approx(ta=ta, tmrt=tmrt, va=va, rh=rh)
+        utci_approx(ta=ta, tmrt=tmrt, v=v, rh=rh)
 
     assert excinfo.value.args[0] == 'All arrays must have the same length'
 
@@ -357,39 +357,39 @@ def test_pet_static_array_sizes_differ():
 
 @pytest.mark.parametrize('f', [mrt, mrt_np])
 @pytest.mark.parametrize(
-    ('tg', 'va', 'ta', 'd', 'expected'),
+    ('ta', 'tg', 'v', 'd', 'expected'),
     (
         # the first two cases are example from DIN EN ISO 7726, however
         # they perform very strict rounding, leading to slightly different results
         # here since there is no rounding done
-        pytest.param(55, 0.3, 30, 0.15, 74.4, id='forced convection'),
-        pytest.param(53.2, 0.3, 30, 0.1, 74.6, id='globe diameter 0.1'),
-        pytest.param(55, 0.1, 30, 0.15, 55.0, id='natural convection'),
+        pytest.param(30, 55, 0.3, 0.15, 74.4, id='forced convection'),
+        pytest.param(30, 53.2, 0.3, 0.1, 74.6, id='globe diameter 0.1'),
+        pytest.param(30, 55, 0.1, 0.15, 55.0, id='natural convection'),
     ),
 )
-def test_tmrt_scalar_values(tg, va, ta, d, expected, f):
-    assert pytest.approx(f(tg=tg, va=va, ta=ta, d=d, e=0.95), abs=1e-1) == expected
+def test_tmrt_scalar_values(ta, tg, v, d, expected, f):
+    assert pytest.approx(f(ta=ta, tg=tg, v=v, d=d, e=0.95), abs=1e-1) == expected
 
 
 @pytest.mark.parametrize('f', [mrt, mrt_np])
 def test_tmrt_array_values_default_d_e(f):
     tg = np.array([55, 53.2, 55])
-    va = np.array([0.3, 0.3, 0.1])
+    v = np.array([0.3, 0.3, 0.1])
     ta = np.array([30, 30, 30])
     expected = np.array([74.4, 71.6, 55.0])
-    assert pytest.approx(f(tg=tg, va=va, ta=ta), abs=1e-1) == expected
+    assert pytest.approx(f(ta=ta, tg=tg, v=v), abs=1e-1) == expected
 
 
 @pytest.mark.parametrize('f', [mrt, mrt_np])
 def test_tmrt_array_values(f):
     tg = np.array([55, 53.2, 55])
-    va = np.array([0.3, 0.3, 0.1])
+    v = np.array([0.3, 0.3, 0.1])
     ta = np.array([30, 30, 30])
     d = np.array([0.15, 0.1, 0.15])
     e = np.array([0.95, 0.95, 0.95])
     expected = np.array([74.4, 74.6, 55.0])
     assert_array_almost_equal(
-        f(tg=tg, va=va, ta=ta, d=d, e=e),
+        f(ta=ta, tg=tg, v=v, d=d, e=e),
         expected,
         decimal=1,
     )
@@ -399,7 +399,7 @@ def test_tmrt_array_values(f):
 @pytest.mark.parametrize('d', (0, -0.01, -100.5))
 def test_mrt_d_outside_of_allowed_range(f, d):
     with pytest.raises(ValueError) as excinfo:
-        f(tg=70, va=3, ta=20, d=d)
+        f(ta=20, tg=70, v=3, d=d)
 
     assert excinfo.value.args[0] == 'The globe diameter (d) must be positive'
 
@@ -408,7 +408,7 @@ def test_mrt_d_outside_of_allowed_range(f, d):
 @pytest.mark.parametrize('e', (-0.01, 1.1))
 def test_mrt_e_outside_of_allowed_range(f, e):
     with pytest.raises(ValueError) as excinfo:
-        f(tg=70, va=3, ta=20, e=e)
+        f(ta=20, tg=70, v=3, e=e)
 
     assert excinfo.value.args[0] == 'The emissivity (e) must be between 0 and 1'
 
@@ -417,9 +417,9 @@ def test_mrt_e_outside_of_allowed_range(f, e):
 def test_mrt_shapes_incorrect(shape):
     tg = np.array([50.5, 70.5]).reshape(shape)
     ta = np.array([20.5, 30.5]).reshape(shape)
-    va = np.array([1.5, 2.5]).reshape(shape)
+    v = np.array([1.5, 2.5]).reshape(shape)
     with pytest.raises(TypeError) as excinfo:
-        mrt(tg=tg, va=va, ta=ta)
+        mrt(tg=tg, v=v, ta=ta)
 
     assert excinfo.value.args[0] == (
         'Only arrays with one dimension are allowed. '
@@ -430,9 +430,9 @@ def test_mrt_shapes_incorrect(shape):
 def test_mrt_array_sizes_differ():
     tg = np.array([50.5])
     ta = np.array([20.5, 30.5])
-    va = np.array([1.5, 2.5])
+    v = np.array([1.5, 2.5])
     with pytest.raises(ValueError) as excinfo:
-        mrt(tg=tg, va=va, ta=ta)
+        mrt(tg=tg, v=v, ta=ta)
 
     assert excinfo.value.args[0] == 'All arrays must have the same length'
 

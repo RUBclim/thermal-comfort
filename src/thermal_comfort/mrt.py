@@ -12,9 +12,9 @@ T = TypeVar('T', bound=Union[np.floating, np.integer])
 
 
 def _tmrt_forced_convection(
-        tg: Union[npt.NDArray[T], float],
         ta: Union[npt.NDArray[T], float],
-        va: Union[npt.NDArray[T], float],
+        tg: Union[npt.NDArray[T], float],
+        v: Union[npt.NDArray[T], float],
         d: Union[npt.NDArray[T], float],
         e: Union[npt.NDArray[T], float],
 ) -> Union[npt.NDArray[T], np.floating]:
@@ -22,9 +22,9 @@ def _tmrt_forced_convection(
     Calculate the mean radiant temperature based on DIN EN ISO 7726 for forced
     convection.
 
-    tg = black globe temperature
     ta = air temperature
-    va = air velocity
+    tg = black globe temperature
+    v = air velocity
     d = diameter of the black globe
     e = emissivity of the black globe
     """
@@ -33,7 +33,7 @@ def _tmrt_forced_convection(
             (
                 (np.power((tg + 273), 4)) +
                 (
-                    ((1.1 * np.power(10, 8)) * np.power(va, 0.6)) /
+                    ((1.1 * np.power(10, 8)) * np.power(v, 0.6)) /
                     (e * np.power(d, 0.4))
                 ) * (tg - ta)
             ), 0.25,
@@ -42,8 +42,8 @@ def _tmrt_forced_convection(
 
 
 def _tmrt_natural_convection(
-        tg: Union[npt.NDArray[T], float],
         ta: Union[npt.NDArray[T], float],
+        tg: Union[npt.NDArray[T], float],
         d: Union[npt.NDArray[T], float],
         e: Union[npt.NDArray[T], float],
 ) -> Union[npt.NDArray[T], np.floating]:
@@ -51,8 +51,8 @@ def _tmrt_natural_convection(
     Calculate the mean radiant temperature based on DIN EN ISO 7726 for natural
     convection.
 
-    tg = black globe temperature
     ta = air temperature
+    tg = black globe temperature
     d = diameter of the black globe
     e = emissivity of the black globe
     """
@@ -66,9 +66,9 @@ def _tmrt_natural_convection(
 
 
 def mrt_np(
-        tg: Union[npt.NDArray[T], float],
-        va: Union[npt.NDArray[T], float],
         ta: Union[npt.NDArray[T], float],
+        tg: Union[npt.NDArray[T], float],
+        v: Union[npt.NDArray[T], float],
         d: Union[npt.NDArray[T], float] = 0.15,
         e: Union[npt.NDArray[T], float] = 0.95,
 ) -> Union[npt.NDArray[T], np.floating]:
@@ -84,14 +84,14 @@ def mrt_np(
     This function performs better for smaller arrays. For larger arrays, the
     fortran-based function outperforms this function.
 
-    :param tg: black globe temperature
-    :param va: air velocity
     :param ta: air temperature
+    :param tg: black globe temperature
+    :param v: air velocity
     :param d: diameter of the black globe (default 0.15 m)
     :param e: emissivity of the black globe (default 0.95)
     """
     tg = np.asarray(tg)
-    va = np.asarray(va)
+    v = np.asarray(v)
     ta = np.asarray(ta)
     # when we use the default, we need to reshape the arrays
     if isinstance(d, float):
@@ -108,7 +108,7 @@ def mrt_np(
 
     # we need to mask the values and apply the correct function to these values
     hcg_natural = np.power(1.4 * (np.abs(tg - ta) / 0.15), 0.25)
-    hcg_forced = (6.3 * (np.power(va, 0.6) / np.power(d, 0.4)))
+    hcg_forced = (6.3 * (np.power(v, 0.6) / np.power(d, 0.4)))
 
     mask = hcg_natural > hcg_forced
     output = np.zeros(shape=mask.shape)
@@ -118,15 +118,15 @@ def mrt_np(
     )
     # apply the forced convection cases
     output[~mask] = _tmrt_forced_convection(
-        tg=tg[~mask], ta=ta[~mask], va=va[~mask], d=d[~mask], e=e[~mask],
+        tg=tg[~mask], ta=ta[~mask], v=v[~mask], d=d[~mask], e=e[~mask],
     )
     return output
 
 
 def mrt(
-        tg: npt.ArrayLike,
-        va: npt.ArrayLike,
         ta: npt.ArrayLike,
+        tg: npt.ArrayLike,
+        v: npt.ArrayLike,
         d: npt.ArrayLike = 0.15,
         e: npt.ArrayLike = 0.95,
 ) -> npt.NDArray[Any]:
@@ -142,14 +142,14 @@ def mrt(
     This function performs better for larger arrays. For smaller arrays, the
     numpy-based function outperforms this function.
 
-    :param tg: black globe temperature
-    :param va: air velocity
     :param ta: air temperature
+    :param tg: black globe temperature
+    :param v: air velocity
     :param d: diameter of the black globe (default 0.15 m)
     :param e: emissivity of the black globe (default 0.95)
     """
     tg = np.array(tg)
-    va = np.array(va)
+    v = np.array(v)
     ta = np.array(ta)
     # check if we're using the default values for d and e
     if isinstance(d, float):
@@ -163,7 +163,7 @@ def mrt(
 
     # 1. check for correct shape
     if not (
-            tg.ndim <= 1 and va.ndim <= 1 and ta.ndim <= 1 and
+            tg.ndim <= 1 and v.ndim <= 1 and ta.ndim <= 1 and
             d.ndim <= 1 and e.ndim <= 1
     ):
         raise TypeError(
@@ -171,7 +171,7 @@ def mrt(
             'Please reshape your array accordingly',
         )
     # 2. check for same length
-    if not (tg.size == va.size == ta.size == d.size == e.size):
+    if not (tg.size == v.size == ta.size == d.size == e.size):
         raise ValueError('All arrays must have the same length')
 
     # 3. check for value ranges
@@ -181,7 +181,7 @@ def mrt(
     if np.any((e < 0) | (e > 1)):
         raise ValueError('The emissivity (e) must be between 0 and 1')
 
-    result = thermal_comfort_mod.mrt(tg=tg, va=va, ta=ta, d=d, e=e)
+    result = thermal_comfort_mod.mrt(tg=tg, v=v, ta=ta, d=d, e=e)
     # check if we have a single value
     if result.size == 1:
         return result.item()

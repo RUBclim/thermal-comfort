@@ -52,7 +52,7 @@ def pet_static(
 def utci_approx(
         ta: npt.NDArray[T] | float,
         tmrt: npt.NDArray[T] | float,
-        va: npt.NDArray[T] | float,
+        v: npt.NDArray[T] | float,
         rh: npt.NDArray[T] | float,
 ) -> npt.NDArray[Any]:
     """Calculate the Universal Thermal Climate Index (UTCI)
@@ -70,7 +70,7 @@ def utci_approx(
 
     :param ta: air temperature in °C
     :param tmrt: mean radiant temperature in °C
-    :param va: wind speed in m/s
+    :param v: wind speed in m/s
     :param rh: relative humidity in %
 
     :returns: Universal Thermal Climate Index (UTCI) in °C
@@ -79,9 +79,9 @@ def utci_approx(
 
 
 def mrt(
-        tg: npt.NDArray[T] | float,
-        va: npt.NDArray[T] | float,
         ta: npt.NDArray[T] | float,
+        tg: npt.NDArray[T] | float,
+        v: npt.NDArray[T] | float,
         d: npt.NDArray[T] | float,
         e: npt.NDArray[T] | float,
 ) -> npt.NDArray[T]:
@@ -97,9 +97,9 @@ def mrt(
     This function performs better for larger arrays. For smaller arrays, the
     numpy-based function outperforms this function.
 
-    :param tg: black globe temperature
-    :param va: air velocity
     :param ta: air temperature
+    :param tg: black globe temperature
+    :param v: air velocity
     :param d: diameter of the black globe (default 0.15 m)
     :param e: emissivity of the black globe (default 0.95)
     """

@@ -10,7 +10,7 @@ from ._thermal_comfort import thermal_comfort_mod
 def utci_approx(
         ta: npt.ArrayLike,
         tmrt: npt.ArrayLike,
-        va: npt.ArrayLike,
+        v: npt.ArrayLike,
         rh: npt.ArrayLike,
 ) -> npt.NDArray[Any]:
     """Calculate the Universal Thermal Climate Index (UTCI)
@@ -25,24 +25,24 @@ def utci_approx(
 
     :param ta: air temperature in °C
     :param tmrt: mean radiant temperature in °C
-    :param va: wind speed in m/s
+    :param v: wind speed in m/s
     :param rh: relative humidity in %
 
     :returns: Universal Thermal Climate Index (UTCI) in °C
     """
     ta = np.array(ta)
     tmrt = np.array(tmrt)
-    va = np.array(va)
+    v = np.array(v)
     rh = np.array(rh)
 
     # 1. check for correct shape
-    if not (ta.ndim <= 1 and tmrt.ndim <= 1 and va.ndim <= 1 and rh.ndim <= 1):
+    if not (ta.ndim <= 1 and tmrt.ndim <= 1 and v.ndim <= 1 and rh.ndim <= 1):
         raise TypeError(
             'Only arrays with one dimension are allowed. '
             'Please reshape your array accordingly',
         )
     # 2. check for same length
-    if not (ta.size == tmrt.size == va.size == rh.size):
+    if not (ta.size == tmrt.size == v.size == rh.size):
         raise ValueError('All arrays must have the same length')
 
     # 3. check for value ranges
@@ -53,10 +53,10 @@ def utci_approx(
             category=RuntimeWarning,
             stacklevel=2,
         )
-    if np.any((va < 0.5) | (va > 17)):
+    if np.any((v < 0.5) | (v > 17)):
         warnings.warn(
-            'encountered a value for va outside of the defined range of '
-            '0.5 <= va <= 17',
+            'encountered a value for v outside of the defined range of '
+            '0.5 <= v <= 17',
             stacklevel=2,
             category=RuntimeWarning,
         )
@@ -69,7 +69,7 @@ def utci_approx(
             stacklevel=2,
         )
 
-    result = thermal_comfort_mod.utci_approx(ta=ta, tmrt=tmrt, va=va, rh=rh)
+    result = thermal_comfort_mod.utci_approx(ta=ta, tmrt=tmrt, v=v, rh=rh)
     # check if we have a single value
     if result.size == 1:
         return result.item()
@@ -79,9 +79,9 @@ def utci_approx(
 
 def pet_static(
         ta: npt.ArrayLike,
-        rh: npt.ArrayLike,
-        v: npt.ArrayLike,
         tmrt: npt.ArrayLike,
+        v: npt.ArrayLike,
+        rh: npt.ArrayLike,
         p: npt.ArrayLike,
 ) -> npt.NDArray[Any]:
     """Calculate the Physiological Equivalent Temperature (PET).
