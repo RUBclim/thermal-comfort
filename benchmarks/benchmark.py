@@ -69,6 +69,18 @@ def main() -> int:
         setup=f'from thermal_comfort import heat_index\n{array_setup}',
     )
 
+    runner.timeit(
+        name='heat index extended scalar',
+        stmt='heat_index_extended(ta=20, rh=50)',
+        setup='from thermal_comfort import heat_index_extended',
+    )
+
+    runner.timeit(
+        name='heat index extended array',
+        stmt='heat_index_extended(ta=ta, rh=rh)',
+        setup=f'from thermal_comfort import heat_index_extended\n{array_setup}',
+    )
+
     # UTCI
     runner.timeit(
         name='utci scalar',
