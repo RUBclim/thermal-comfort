@@ -91,6 +91,7 @@
 
 MODULE thermal_comfort_mod
    USE, INTRINSIC :: ieee_arithmetic
+   USE omp_lib
    IMPLICIT NONE
 
    PRIVATE
@@ -116,6 +117,15 @@ MODULE thermal_comfort_mod
            7.0229056E-10, &
            -1.8680009E-13, &
            2.7150305/)
+
+   REAL(8), PARAMETER :: g0 = -2.8365744e3
+   REAL(8), PARAMETER :: g1 = -6.028076559e3
+   REAL(8), PARAMETER :: g2 = 1.954263612e1
+   REAL(8), PARAMETER :: g3 = -2.737830188e-2
+   REAL(8), PARAMETER :: g4 = 1.6261698e-5
+   REAL(8), PARAMETER :: g5 = 7.0229056e-10
+   REAL(8), PARAMETER :: g6 = -1.8680009e-13
+   REAL(8), PARAMETER :: g7 = 2.7150305
 
    ! used for the heat index calculation
    REAL(kind=8), PARAMETER :: c1 = -8.78469475556
@@ -218,6 +228,7 @@ CONTAINS
       ! calculate vapor pressure from rh
       vpa = (rh*es_vectorized_wexler(Ta))/100.0
 
+      !$OMP PARALLEL DO
       do i = 1, size(ta)
          ! this never converges if a value is nan so  we need to check if any of the values are nan
          IF (ieee_is_nan(ta(i)) .OR. ieee_is_nan(rh(i)) .OR. ieee_is_nan(tmrt(i)) .OR. ieee_is_nan(v(i)) .OR. &
@@ -235,6 +246,7 @@ CONTAINS
          CALL pet_iteration(acl(i), adu(i), aeff(i), esw(i), facl(i), feff(i), p(i), rdcl(i), &
                             rdsk(i), rtv(i), ta(i), tcl(i), tsk(i), tx(i), vpts(i), wetsk(i))
       end do
+      !$OMP END PARALLEL DO
    END SUBROUTINE pet_static
 
 !------------------------------------------------------------------------------!
@@ -646,14 +658,13 @@ CONTAINS
       real(kind=8), intent(in) :: ta(:)  ! Assumes a 1D array of any size
       real(kind=8) :: es_out(size(ta))
       real(kind=8) :: tk(size(ta))
-      INTEGER :: i
+
       !calculate saturation vapor pressure
       tk = ta + 273.15
-      es_out = g(7)*log(tk)
-      do i = 0, 6
-         es_out = es_out + g(i)*tk**(i - 2)
-      end do
-      es_out = exp(es_out)*0.01 ! *0.01: convert Pa to hPa
+
+      ! Convert Pa to hPa
+      es_out = exp(g0/tk**2 + g1/tk + g2 + g3*tk + g4 &
+                   *tk**2 + g5*tk**3 + g6*tk**4 + g7*log(tk))*0.01
    END FUNCTION es_vectorized_wexler
 
    function UTCI_approx(Ta, Tmrt, v, rh) result(result_array)
@@ -671,15 +682,20 @@ CONTAINS
       real(kind=8), intent(in) :: Ta(:), v(:), Tmrt(:), rh(:)
       real(kind=8) :: D_TMRT(size(Ta)), PA(size(Ta))
       real(kind=8) :: result_array(size(Ta))
-
+      !$OMP PARALLEL
       !~ type of input of the argument list
       ! DOUBLE PRECISION Ta,va,Tmrt,ehPa,Pa,D_Tmrt,rh;
+      !$OMP SECTIONS
+      !$OMP SECTION
       D_TMRT = Tmrt - Ta
       !     !~ calculate vapour pressure from relative humidity
       ! TODO: this is a significant slow down - we could inline a simpler version for
       ! calculating es
+      !$OMP SECTION
       PA = (rh*es_vectorized_wexler(Ta))/1000.0  !~ use vapour pressure in kPa
+      !$OMP END SECTIONS
       !     !~ calculate 6th order polynomial as approximation
+      !$OMP WORKSHARE
       result_array = Ta + &
                      (6.07562052D-01) + &
                      (-2.27712343D-02)*Ta + &
@@ -891,30 +907,41 @@ CONTAINS
                      (1.04452989D-03)*v*Pa*Pa*Pa*Pa*Pa + &
                      (2.47090539D-04)*D_Tmrt*Pa*Pa*Pa*Pa*Pa + &
                      (1.48348065D-03)*Pa*Pa*Pa*Pa*Pa*Pa
+      !$OMP END WORKSHARE
+      !$omp END parallel
    END
 
    FUNCTION tmrt_forced_convection(ta, tg, v, d, e)
       IMPLICIT NONE
       REAL(kind=8), INTENT(IN) :: tg(:), ta(:), v(:), d(:), e(:)
       REAL(kind=8) :: tmrt_forced_convection(size(tg))
+      !$OMP PARALLEL WORKSHARE
       tmrt_forced_convection = ((((tg + 273)**4) + (((1.1*(10**8))*v**0.6)/(e*(d**0.4)))*(tg - ta))**0.25) - 273
+      !$OMP END PARALLEL WORKSHARE
    END FUNCTION tmrt_forced_convection
 
    FUNCTION tmrt_natural_convection(ta, tg, d, e)
       IMPLICIT NONE
       REAL(kind=8), INTENT(IN) :: tg(:), ta(:), d(:), e(:)
       REAL(kind=8) :: tmrt_natural_convection(size(tg))
+      !$OMP PARALLEL WORKSHARE
       tmrt_natural_convection = ((((tg + 273)**4) + ((0.25*10)**8/e)*((ABS(tg - ta)/d)**0.25)*(tg - ta))**0.25) - 273
+      !$OMP END PARALLEL WORKSHARE
    END FUNCTION tmrt_natural_convection
 
    FUNCTION mrt(ta, tg, v, d, e)
       IMPLICIT NONE
       REAL(kind=8), INTENT(IN) :: tg(:), v(:), ta(:), d(:), e(:)
       REAL(kind=8) :: mrt(size(tg)), hcg_natural(size(tg)), hcg_forced(size(tg))
-
+      !$OMP PARALLEL
       ! calculate both versions of hgc and check which one is larger
+      !$OMP SECTIONS
+      !$OMP SECTION
       hcg_natural = (1.4*(ABS(tg - ta)/0.15)**0.25)
+      !$OMP SECTION
       hcg_forced = (6.3*((v**0.6)/(d**0.4)))
+      !$OMP END SECTIONS
+      !$OMP END PARALLEL
       mrt = MERGE( &
             tmrt_natural_convection(ta, tg, d, e), &
             tmrt_forced_convection(ta, tg, v, d, e), &
@@ -926,9 +953,11 @@ CONTAINS
       IMPLICIT NONE
       REAL(kind=8), INTENT(IN) :: ta(:), rh(:)
       REAL(kind=8) :: twb(size(ta))
+      !$OMP PARALLEL WORKSHARE
       twb = ta*atan(0.151977*(rh + 8.313659)**0.5) + &
             atan(ta + rh) - atan(rh - 1.676331) + 0.00391838* &
             (rh)**1.5*atan(0.023101*rh) - 4.686035
+      !$OMP END PARALLEL WORKSHARE
    END FUNCTION twb
 
    FUNCTION heat_index(ta, rh)
@@ -959,6 +988,7 @@ CONTAINS
       !  - 0.22475541*ta_f*rh - 6.83783D-3*ta_f**2 &
       !  - 5.481717D-2*rh**2 + 1.22874D-3*ta_f**2*rh &
       !  + 8.5282D-4*ta_f*rh**2 - 1.99D-6*ta_f**2*rh**2, &
+      !$OMP PARALLEL WORKSHARE
       heat_index = MERGE( &
                    missing, &
                    c1 + c2*ta + c3*rh + c4*ta*rh + &
@@ -967,6 +997,7 @@ CONTAINS
                    c9*ta**2*rh**2, &
                    (ta < 26.666) .OR. (rh < 40) &
                    )
+      !$OMP END PARALLEL WORKSHARE
 
    END FUNCTION heat_index
 
@@ -975,7 +1006,9 @@ CONTAINS
       IMPLICIT NONE
       REAL(kind=8), INTENT(IN) :: celsius(:)
       REAL(kind=8) :: c2f(size(celsius))
+      !$OMP PARALLEL WORKSHARE
       c2f = ((9.0/5.0)*celsius) + 32
+      !$OMP END PARALLEL WORKSHARE
    END FUNCTION c2f
 
    FUNCTION f2c(fahrenheit)
@@ -983,7 +1016,9 @@ CONTAINS
       IMPLICIT NONE
       REAL(kind=8), INTENT(IN) :: fahrenheit(:)
       REAL(kind=8) :: f2c(size(fahrenheit))
+      !$OMP PARALLEL WORKSHARE
       f2c = (5.0/9.0)*(fahrenheit - 32.0)
+      !$OMP END PARALLEL WORKSHARE
    END FUNCTION f2c
 
    FUNCTION heat_index_extended(ta, rh)
@@ -995,6 +1030,7 @@ CONTAINS
 
       !convert °C to °F since HI is defined in Fahrenheit
       ta_f = c2f(ta)
+      !$OMP PARALLEL WORKSHARE
       heat_index_extended = 0.5*(ta_f + 61.0 + ((ta_f - 68.0)*1.2) + (rh*0.094))
       heat_index_extended = MERGE( &
                             -42.379 + 2.04901523*ta_f + 10.14333127*rh &
@@ -1017,6 +1053,7 @@ CONTAINS
                             rh > 85.0 .AND. ta_f > 80.0 .AND. ta_f < 87.0 &
                             )
       ! convert back to °C
+      !$OMP END PARALLEL WORKSHARE
       heat_index_extended = f2c(heat_index_extended)
    END FUNCTION heat_index_extended
 
