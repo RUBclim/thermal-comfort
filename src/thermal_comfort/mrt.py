@@ -1,4 +1,4 @@
-from typing import Any
+from typing import overload
 from typing import TypeVar
 from typing import Union
 
@@ -84,10 +84,10 @@ def mrt_np(
     This function performs better for smaller arrays. For larger arrays, the
     fortran-based function outperforms this function.
 
-    :param ta: air temperature
-    :param tg: black globe temperature
-    :param v: air velocity
-    :param d: diameter of the black globe (default 0.15 m)
+    :param ta: air temperature in °C
+    :param tg: black globe temperature in °C
+    :param v: air velocity in m/s
+    :param d: diameter of the black globe in m (default 0.15 m)
     :param e: emissivity of the black globe (default 0.95)
     """
     tg = np.asarray(tg)
@@ -123,13 +123,35 @@ def mrt_np(
     return output
 
 
+# autopep8: off
+@overload
 def mrt(
-        ta: npt.ArrayLike,
-        tg: npt.ArrayLike,
-        v: npt.ArrayLike,
-        d: npt.ArrayLike = 0.15,
-        e: npt.ArrayLike = 0.95,
-) -> npt.NDArray[Any]:
+        ta: float,
+        tg: float,
+        v: float,
+        d: float = 0.15,
+        e: float = 0.95,
+) -> float: ...
+
+
+@overload
+def mrt(
+        ta: npt.NDArray[T],
+        tg: npt.NDArray[T],
+        v: npt.NDArray[T],
+        d: Union[npt.NDArray[T], float] = 0.15,
+        e: Union[npt.NDArray[T], float] = 0.95,
+) -> npt.NDArray[T]: ...
+# autopep8: on
+
+
+def mrt(
+        ta: Union[npt.NDArray[T], float],
+        tg: Union[npt.NDArray[T], float],
+        v: Union[npt.NDArray[T], float],
+        d: Union[npt.NDArray[T], float] = 0.15,
+        e: Union[npt.NDArray[T], float] = 0.95,
+) -> Union[npt.NDArray[T], float]:
     """
     Calculate the mean radiant temperature based on DIN EN ISO 7726.
 
@@ -189,10 +211,40 @@ def mrt(
         return result
 
 
+# autopep8: off
+@overload
 def twb(
-        ta: npt.ArrayLike,
-        rh: npt.ArrayLike,
-) -> npt.NDArray[Any]:
+        ta: float,
+        rh: float,
+) -> float: ...
+
+
+@overload
+def twb(
+        ta: npt.NDArray[T],
+        rh: npt.NDArray[T],
+) -> npt.NDArray[T]: ...
+# autopep8: on
+
+
+def twb(
+        ta: Union[npt.NDArray[T], float],
+        rh: Union[npt.NDArray[T], float],
+) -> Union[npt.NDArray[T], float]:
+    """Calculate the wet bulb temperature following the Stull (2011) equation
+
+    :param ta: air temperature in °C
+    :param rh: relative humidity in %
+
+    **References**
+
+    - Stull, R., 2011. Wet-Bulb Temperature from Relative Humidity and
+      Air Temperature. J. Appl. Meteorol. Climatol. 50, 2267-2269.
+      https://doi.org/10.1175/JAMC-D-11-0143.1
+
+
+
+    """
     ta = np.array(ta)
     rh = np.array(rh)
 
