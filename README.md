@@ -17,6 +17,10 @@ via ssh
 pip install git+ssh://git@github.com/RUBclim/thermal-comfort
 ```
 
+## Documentation
+
+Docs can be found here: https://rubclim.github.io/thermal-comfort/
+
 ## Run the tests
 
 On version 3.12 for example...
