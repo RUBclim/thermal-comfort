@@ -1,34 +1,73 @@
 import warnings
-from typing import Any
+from typing import overload
+from typing import TypeVar
+from typing import Union
 
 import numpy as np
 import numpy.typing as npt
 
 from ._thermal_comfort import thermal_comfort_mod
 
+T = TypeVar('T', bound=Union[np.floating, np.integer])
+
+
+# autopep8: off
+@overload
+def utci_approx(
+        ta: float,
+        tmrt: float,
+        v: float,
+        rh: float,
+) -> float: ...
+
+
+@overload
+def utci_approx(
+        ta: npt.NDArray[T],
+        tmrt: npt.NDArray[T],
+        v: npt.NDArray[T],
+        rh: npt.NDArray[T],
+) -> npt.NDArray[T]: ...
+# autopep8: on
+
 
 def utci_approx(
-        ta: npt.ArrayLike,
-        tmrt: npt.ArrayLike,
-        v: npt.ArrayLike,
-        rh: npt.ArrayLike,
-) -> npt.NDArray[Any]:
+        ta: Union[npt.NDArray[T], float],
+        tmrt: Union[npt.NDArray[T], float],
+        v: Union[npt.NDArray[T], float],
+        rh: Union[npt.NDArray[T], float],
+) -> Union[npt.NDArray[T], float]:
     """Calculate the Universal Thermal Climate Index (UTCI)
 
     The UTCI is implemented as described in VDI 3787 Part 2. The fortran code was
-    vendored from here:
+    vendored from here: https://utci.org/resources/UTCI%20Program%20Code.zip.
+    A few changes were implemented to the original fortran-code.
 
-    - https://utci.org/resources/UTCI%20Program%20Code.zip
+    - Instead of taking the vapor pressure as an argument, it now takes the
+      relative humidtiy. The vapor pressure is calculated from the relative humidtiy
+      using the formular by Wexler (1976) which is described by Hardy (1998).
+    - Arguments were renamed for a consistent interface within this package.
 
+    This functions is optimized on 1D-array operations, however also scalars may
+    be provided.
 
-    The procedure works on 1D-arrays.
-
-    :param ta: air temperature in °C
-    :param tmrt: mean radiant temperature in °C
-    :param v: wind speed in m/s
-    :param rh: relative humidity in %
+    :param ta: Air temperature in °C
+    :param tmrt: Mean radiant temperature in °C
+    :param v: Wind speed in m/s
+    :param rh: Relative humidity in %
 
     :returns: Universal Thermal Climate Index (UTCI) in °C
+
+    **References**
+
+    - Hardy, R.; ITS-90 Formulations for Vapor Pressure, Frostpoint Temperature,
+      Dewpoint Temperature and Enhancement Factors in the Range -100 to 100 °C;
+      Proceedings of Third International Symposium on Humidity and Moisture;
+      edited by National Physical Laboratory (NPL), London, 1998, pp. 214-221
+      https://www.decatur.de/javascript/dew/resources/its90formulas.pdf
+    - Wexler, A., Vapor Pressure Formulation for Water in Range 0 to 100°C.
+      A Revision, Journal of Research of the National Bureau of Standards - A.
+      Physics and Chemistry, September - December 1976, Vol. 80A, Nos. 5 and 6, 775-78
     """
     ta = np.array(ta)
     tmrt = np.array(tmrt)
@@ -77,13 +116,35 @@ def utci_approx(
         return result
 
 
+# autopep8: off
+@overload
 def pet_static(
-        ta: npt.ArrayLike,
-        tmrt: npt.ArrayLike,
-        v: npt.ArrayLike,
-        rh: npt.ArrayLike,
-        p: npt.ArrayLike,
-) -> npt.NDArray[Any]:
+        ta: float,
+        tmrt: float,
+        v: float,
+        rh: float,
+        p: float,
+) -> float: ...
+
+
+@overload
+def pet_static(
+        ta: npt.NDArray[T],
+        tmrt: npt.NDArray[T],
+        v: npt.NDArray[T],
+        rh: npt.NDArray[T],
+        p: npt.NDArray[T],
+) -> npt.NDArray[T]: ...
+# autopep8: on
+
+
+def pet_static(
+        ta: Union[npt.NDArray[T], float],
+        tmrt: Union[npt.NDArray[T], float],
+        v: Union[npt.NDArray[T], float],
+        rh: Union[npt.NDArray[T], float],
+        p: Union[npt.NDArray[T], float],
+) -> Union[npt.NDArray[T], float]:
     """Calculate the Physiological Equivalent Temperature (PET).
 
     The PET is implemented as described in VDI 3787 Part 2. The fortran code was
@@ -92,17 +153,21 @@ def pet_static(
     - https://www.vdi.de/richtlinien/programme-zu-vdi-richtlinien/vdi-3787-blatt-2
     - http://web.archive.org/web/20241219155627/https://www.vdi.de/fileadmin/pages/vdi_de/redakteure/ueber_uns/fachgesellschaften/KRdL/dateien/VDI_3787-2_PET.zip
 
-    The code was adapted to retrieve relative humidity instead of vapor pressure. The
-    saturation vapor pressure is calculated using the Wexler formula.
+    - Instead of taking the vapor pressure as an argument, it now takes the
+      relative humidtiy. The vapor pressure is calculated from the relative humidtiy
+      using the formular by Wexler (1976) which is described by Hardy (1998).
+    - Arguments were renamed for a consistent interface within this package.
 
-    The procedure has some limitations compare to a full implementation of the PET.
+    This functions is optimized on 1D-array operations, however also scalars may be provided.
+
+    The procedure has some limitations compared to a full implementation of the PET.
     Many variables are set to static values, such as:
 
-    - ``age = 35.``
-    - ``mbody = 75.``
+    - ``age = 35``
+    - ``mbody = 75``
     - ``ht = 1.75``
-    - ``work = 80.``
-    - ``eta = 0.``
+    - ``work = 80``
+    - ``eta = 0``
     - ``icl = 0.9``
     - ``fcl = 1.15``
     - ``pos = 1``
@@ -115,6 +180,15 @@ def pet_static(
     :param p: atmospheric pressure in hPa
 
     :returns: Physiological Equivalent Temperature (PET) in °C
+
+    **References**
+
+    - Hardy, R.; ITS-90 Formulations for Vapor Pressure, Frostpoint Temperature, Dewpoint Temperature and Enhancement Factors in the Range -100 to 100 °C;
+      Proceedings of Third International Symposium on Humidity and Moisture; edited by National Physical Laboratory (NPL), London, 1998, pp. 214-221
+      https://www.decatur.de/javascript/dew/resources/its90formulas.pdf
+    - Wexler, A., Vapor Pressure Formulation for Water in Range 0 to 100°C. A Revision, Journal of Research of
+      the National Bureau of Standards - A. Physics and Chemistry, September - December 1976, Vol. 80A, Nos.
+      5 and 6, 775-78
     """  # noqa: E501
     ta = np.array(ta)
     rh = np.array(rh)
@@ -143,10 +217,49 @@ def pet_static(
         return result
 
 
+# autopep8: off
+@overload
+def heat_index(ta: float, rh: float) -> float: ...
+
+
+@overload
 def heat_index(
-        ta: npt.ArrayLike,
-        rh: npt.ArrayLike,
-) -> npt.NDArray[Any]:
+        ta: npt.NDArray[T],
+        rh: npt.NDArray[T],
+) -> npt.NDArray[T]: ...
+# autopep8: on
+
+
+def heat_index(
+        ta: Union[npt.NDArray[T], float],
+        rh: Union[npt.NDArray[T], float],
+) -> Union[npt.NDArray[T], float]:
+    """Calculate the heat index follwing Steadman R.G (1979) & Rothfusz L.P (1990).
+
+    This calculates the heat index in the range of >= 80 °F (26.666 °C) and >= 40 %
+    relative humidity. If values outside of this range are provided, they are
+    returned as ``NaN``. This version natievely works with °C as shown by
+    Blazejczyk et al. 2011.
+
+    This functions is optimized on 1D-array operations, however also scalars may
+    be provided.
+
+    :param ta: Air temperature in °C
+    :param rh: Relative Humidity in %
+
+    **References**
+
+    - Steadman R.G. The assessment of sultriness. Part I: A temperature-humidity index
+      based on human physiology and clothing. J. Appl. Meteorol. 1979;18:861-873.
+      https://doi.org/10.1175/1520-0450(1979)018%3C0861:TAOSPI%3E2.0.CO;2
+
+    - Rothfusz LP (1990) The heat index equation.
+      NWS Southern Region Technical Attachment, SR/SSD 90-23, Fort Worth, Texas
+
+    - Blazejczyk, K., Epstein, Y., Jendritzky, G. Staiger, H., Tinz, B. (2011)
+      Comparison of UTCI to selected thermal indices. Int J Biometeorol 56,
+      515-535 (2012). https://doi.org/10.1007/s00484-011-0453-2
+    """
     ta = np.array(ta)
     rh = np.array(rh)
 
@@ -168,10 +281,49 @@ def heat_index(
         return result
 
 
+# autopep8: off
+@overload
+def heat_index_extended(ta: float, rh: float) -> float: ...
+
+
+@overload
 def heat_index_extended(
-        ta: npt.ArrayLike,
-        rh: npt.ArrayLike,
-) -> npt.NDArray[Any]:
+        ta: npt.NDArray[T],
+        rh: npt.NDArray[T],
+) -> npt.NDArray[T]: ...
+# autopep8: on
+
+
+def heat_index_extended(
+        ta: Union[npt.NDArray[T], float],
+        rh: Union[npt.NDArray[T], float],
+) -> Union[npt.NDArray[T], float]:
+    """Calculate the heat index follwing Steadman R.G (1979) & Rothfusz L.P (1990),
+    but extends the range following The National Weather Service Weather Predicion
+    Center.
+
+    This version uses °F under the hood, since corrections are provided in °F only.
+
+    This functions is optimized on 1D-array operations, however also scalars may
+    be provided.
+
+    :param ta: Air temperature in °C
+    :param rh: Relative Humidity in %
+
+    **References**
+
+    - Steadman R.G. The assessment of sultriness. Part I: A temperature-humidity index
+      based on human physiology and clothing. J. Appl. Meteorol. 1979;18:861-873.
+      https://doi.org/10.1175/1520-0450(1979)018%3C0861:TAOSPI%3E2.0.CO;2
+
+    - Rothfusz LP (1990) The heat index equation.
+      NWS Southern Region Technical Attachment, SR/SSD 90-23, Fort Worth, Texas
+
+    - NOAA/National Weather Service
+      National Centers for Environmental Prediction Weather Prediction Center.
+      The Heat Index Equation.
+      https://www.wpc.ncep.noaa.gov/html/heatindex_equation.shtml
+    """
     ta = np.array(ta)
     rh = np.array(rh)
 
