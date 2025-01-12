@@ -148,6 +148,7 @@ MODULE thermal_comfort_mod
    PUBLIC mrt
    PUBLIC twb
    public heat_index
+   PUBLIC heat_index_extended
 
 CONTAINS
 
@@ -968,4 +969,55 @@ CONTAINS
                    )
 
    END FUNCTION heat_index
+
+   FUNCTION c2f(celsius)
+      ! https://www.weather.gov/media/epz/wxcalc/tempConvert.pdf
+      IMPLICIT NONE
+      REAL(kind=8), INTENT(IN) :: celsius(:)
+      REAL(kind=8) :: c2f(size(celsius))
+      c2f = ((9.0/5.0)*celsius) + 32
+   END FUNCTION c2f
+
+   FUNCTION f2c(fahrenheit)
+      !https://www.weather.gov/media/epz/wxcalc/tempConvert.pdf
+      IMPLICIT NONE
+      REAL(kind=8), INTENT(IN) :: fahrenheit(:)
+      REAL(kind=8) :: f2c(size(fahrenheit))
+      f2c = (5.0/9.0)*(fahrenheit - 32.0)
+   END FUNCTION f2c
+
+   FUNCTION heat_index_extended(ta, rh)
+      ! https://www.wpc.ncep.noaa.gov/html/heatindex_equation.shtml
+      IMPLICIT NONE
+      REAL(kind=8), INTENT(IN) :: ta(:), rh(:)
+      REAL(kind=8) :: heat_index_extended(size(ta))
+      REAL(kind=8) :: ta_f(size(ta))
+
+      !convert °C to °F since HI is defined in Fahrenheit
+      ta_f = c2f(ta)
+      heat_index_extended = 0.5*(ta_f + 61.0 + ((ta_f - 68.0)*1.2) + (rh*0.094))
+      heat_index_extended = MERGE( &
+                            -42.379 + 2.04901523*ta_f + 10.14333127*rh &
+                            - 0.22475541*ta_f*rh - 6.83783D-3*ta_f**2 &
+                            - 5.481717D-2*rh**2 + 1.22874D-3*ta_f**2*rh &
+                            + 8.5282D-4*ta_f*rh**2 - 1.99D-6*ta_f**2*rh**2, &
+                            heat_index_extended, &
+                            ((heat_index_extended + ta_f)/2.0) >= 80.0 &
+                            )
+      ! 1st adj
+      heat_index_extended = MERGE( &
+                            heat_index_extended - ((13.0 - rh)/4.0)*SQRT((17 - ABS(ta_f - 95.0))/17.0), &
+                            heat_index_extended, &
+                            rh < 13.0 .AND. ta_f > 26.666 .AND. ta_f < 44.4 &
+                            )
+      !2nd adjustment
+      heat_index_extended = MERGE( &
+                            heat_index_extended + (((rh - 85.0)/10)*(87 - ta_f)/5), &
+                            heat_index_extended, &
+                            rh > 85.0 .AND. ta_f > 80.0 .AND. ta_f < 87.0 &
+                            )
+      ! convert back to °C
+      heat_index_extended = f2c(heat_index_extended)
+   END FUNCTION heat_index_extended
+
 END MODULE thermal_comfort_mod

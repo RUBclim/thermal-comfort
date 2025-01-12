@@ -118,3 +118,10 @@ def heat_index(
         rh: npt.NDArray[T] | float,
 ) -> npt.NDArray[T]:
     ...
+
+
+def heat_index_extended(
+        ta: npt.NDArray[T] | float,
+        rh: npt.NDArray[T] | float,
+) -> npt.NDArray[T]:
+    ...
