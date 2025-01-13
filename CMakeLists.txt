@@ -14,6 +14,8 @@ find_package(
   COMPONENTS Interpreter Development.Module NumPy ${SKBUILD_SABI_COMPONENT}
   REQUIRED)
 
+# set(CMAKE_Fortran_COMPILER "/usr/bin/python3")
+
 # F2PY headers
 execute_process(
   COMMAND "${PYTHON_EXECUTABLE}" -c
