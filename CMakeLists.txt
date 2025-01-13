@@ -7,7 +7,7 @@ project(
 set(ModuleName "_thermal_comfort")
 # we can add -ffast-math if we do the checking for NaNs in python
 set(CMAKE_Fortran_FLAGS
-    "${CMAKE_Fortran_FLAGS} -Ofast -Wall -march=native -ftree-vectorize -funroll-loops -funsafe-math-optimizations"
+    "${CMAKE_Fortran_FLAGS} -Ofast -Wall -march=native -ftree-vectorize -funroll-loops -funsafe-math-optimizations -fopenmp"
 )
 find_package(
   Python
