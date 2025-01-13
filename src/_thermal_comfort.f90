@@ -187,7 +187,8 @@ CONTAINS
       !  Internal variables:
       ! ----------------
       INTEGER :: i
-      REAL(kind=8) :: vpa(size(ta)), ere(size(ta)), erel(size(ta)), rtv(size(ta)), acl(size(ta)), &
+      REAL(kind=8) :: vpa
+      REAL(kind=8) :: ere(size(ta)), erel(size(ta)), rtv(size(ta)), acl(size(ta)), &
                       adu(size(ta)), wetsk(size(ta)), vpts(size(ta)), tsk(size(ta)), tcl(size(ta)), &
                       rdsk(size(ta)), rdcl(size(ta)), feff(size(ta)), facl(size(ta)), esw(size(ta)), aeff(size(ta))
       !  Optional arguments not supported, removed
@@ -216,9 +217,9 @@ CONTAINS
       pos = 1
       sex = 1
       ! calculate vapor pressure from rh
-      vpa = (rh*es_vectorized_wexler(Ta))/100.0
 
       do i = 1, size(ta)
+         vpa = (rh(i)*es(Ta(i)))/100.0
          ! this never converges if a value is nan so  we need to check if any of the values are nan
          IF (ieee_is_nan(ta(i)) .OR. ieee_is_nan(rh(i)) .OR. ieee_is_nan(tmrt(i)) .OR. ieee_is_nan(v(i)) .OR. &
              ieee_is_nan(p(i))) THEN
@@ -227,10 +228,10 @@ CONTAINS
          END IF
 
          !-- call subfunctions
-         CALL in_body(ere(i), erel(i), p(i), rtv(i), ta(i), vpa(i))
+         CALL in_body(ere(i), erel(i), p(i), rtv(i), ta(i), vpa)
 
          CALL heat_exch(acl(i), adu(i), aeff(i), ere(i), erel(i), esw(i), facl(i), feff(i), &
-                        p(i), rdcl(i), rdsk(i), ta(i), tcl(i), tmrt(i), tsk(i), v(i), vpa(i), vpts(i), wetsk(i))
+                        p(i), rdcl(i), rdsk(i), ta(i), tcl(i), tmrt(i), tsk(i), v(i), vpa, vpts(i), wetsk(i))
 
          CALL pet_iteration(acl(i), adu(i), aeff(i), esw(i), facl(i), feff(i), p(i), rdcl(i), &
                             rdsk(i), rtv(i), ta(i), tcl(i), tsk(i), tx(i), vpts(i), wetsk(i))
@@ -640,22 +641,6 @@ CONTAINS
       return
    END
 
-   FUNCTION es_vectorized_wexler(ta) result(es_out)
-      IMPLICIT NONE
-
-      real(kind=8), intent(in) :: ta(:)  ! Assumes a 1D array of any size
-      real(kind=8) :: es_out(size(ta))
-      real(kind=8) :: tk(size(ta))
-      INTEGER :: i
-      !calculate saturation vapor pressure
-      tk = ta + 273.15
-      es_out = g(7)*log(tk)
-      do i = 0, 6
-         es_out = es_out + g(i)*tk**(i - 2)
-      end do
-      es_out = exp(es_out)*0.01 ! *0.01: convert Pa to hPa
-   END FUNCTION es_vectorized_wexler
-
    function UTCI_approx(Ta, Tmrt, v, rh) result(result_array)
       !~ **********************************************
       !~ DOUBLE PRECISION Function value is the UTCI in degree Celsius
@@ -669,257 +654,252 @@ CONTAINS
 
       implicit none
       real(kind=8), intent(in) :: Ta(:), v(:), Tmrt(:), rh(:)
-      real(kind=8) :: D_TMRT(size(Ta)), PA(size(Ta))
+      real(kind=8) :: D_TMRT, PA
       real(kind=8) :: result_array(size(Ta))
+      integer i
 
-      !~ type of input of the argument list
-      ! DOUBLE PRECISION Ta,va,Tmrt,ehPa,Pa,D_Tmrt,rh;
-      D_TMRT = Tmrt - Ta
-      !     !~ calculate vapour pressure from relative humidity
-      ! TODO: this is a significant slow down - we could inline a simpler version for
-      ! calculating es
-      PA = (rh*es_vectorized_wexler(Ta))/1000.0  !~ use vapour pressure in kPa
-      !     !~ calculate 6th order polynomial as approximation
-      result_array = Ta + &
-                     (6.07562052D-01) + &
-                     (-2.27712343D-02)*Ta + &
-                     (8.06470249D-04)*Ta*Ta + &
-                     (-1.54271372D-04)*Ta*Ta*Ta + &
-                     (-3.24651735D-06)*Ta*Ta*Ta*Ta + &
-                     (7.32602852D-08)*Ta*Ta*Ta*Ta*Ta + &
-                     (1.35959073D-09)*Ta*Ta*Ta*Ta*Ta*Ta + &
-                     (-2.25836520D+00)*v + &
-                     (8.80326035D-02)*Ta*v + &
-                     (2.16844454D-03)*Ta*Ta*v + &
-                     (-1.53347087D-05)*Ta*Ta*Ta*v + &
-                     (-5.72983704D-07)*Ta*Ta*Ta*Ta*v + &
-                     (-2.55090145D-09)*Ta*Ta*Ta*Ta*Ta*v + &
-                     (-7.51269505D-01)*v*v + &
-                     (-4.08350271D-03)*Ta*v*v + &
-                     (-5.21670675D-05)*Ta*Ta*v*v + &
-                     (1.94544667D-06)*Ta*Ta*Ta*v*v + &
-                     (1.14099531D-08)*Ta*Ta*Ta*Ta*v*v + &
-                     (1.58137256D-01)*v*v*v + &
-                     (-6.57263143D-05)*Ta*v*v*v + &
-                     (2.22697524D-07)*Ta*Ta*v*v*v + &
-                     (-4.16117031D-08)*Ta*Ta*Ta*v*v*v + &
-                     (-1.27762753D-02)*v*v*v*v + &
-                     (9.66891875D-06)*Ta*v*v*v*v + &
-                     (2.52785852D-09)*Ta*Ta*v*v*v*v + &
-                     (4.56306672D-04)*v*v*v*v*v + &
-                     (-1.74202546D-07)*Ta*v*v*v*v*v + &
-                     (-5.91491269D-06)*v*v*v*v*v*v + &
-                     (3.98374029D-01)*D_Tmrt + &
-                     (1.83945314D-04)*Ta*D_Tmrt + &
-                     (-1.73754510D-04)*Ta*Ta*D_Tmrt + &
-                     (-7.60781159D-07)*Ta*Ta*Ta*D_Tmrt + &
-                     (3.77830287D-08)*Ta*Ta*Ta*Ta*D_Tmrt + &
-                     (5.43079673D-10)*Ta*Ta*Ta*Ta*Ta*D_Tmrt + &
-                     (-2.00518269D-02)*v*D_Tmrt + &
-                     (8.92859837D-04)*Ta*v*D_Tmrt + &
-                     (3.45433048D-06)*Ta*Ta*v*D_Tmrt + &
-                     (-3.77925774D-07)*Ta*Ta*Ta*v*D_Tmrt + &
-                     (-1.69699377D-09)*Ta*Ta*Ta*Ta*v*D_Tmrt + &
-                     (1.69992415D-04)*v*v*D_Tmrt + &
-                     (-4.99204314D-05)*Ta*v*v*D_Tmrt + &
-                     (2.47417178D-07)*Ta*Ta*v*v*D_Tmrt + &
-                     (1.07596466D-08)*Ta*Ta*Ta*v*v*D_Tmrt + &
-                     (8.49242932D-05)*v*v*v*D_Tmrt + &
-                     (1.35191328D-06)*Ta*v*v*v*D_Tmrt + &
-                     (-6.21531254D-09)*Ta*Ta*v*v*v*D_Tmrt + &
-                     (-4.99410301D-06)*v*v*v*v*D_Tmrt + &
-                     (-1.89489258D-08)*Ta*v*v*v*v*D_Tmrt + &
-                     (8.15300114D-08)*v*v*v*v*v*D_Tmrt + &
-                     (7.55043090D-04)*D_Tmrt*D_Tmrt + &
-                     (-5.65095215D-05)*Ta*D_Tmrt*D_Tmrt + &
-                     (-4.52166564D-07)*Ta*Ta*D_Tmrt*D_Tmrt + &
-                     (2.46688878D-08)*Ta*Ta*Ta*D_Tmrt*D_Tmrt + &
-                     (2.42674348D-10)*Ta*Ta*Ta*Ta*D_Tmrt*D_Tmrt + &
-                     (1.54547250D-04)*v*D_Tmrt*D_Tmrt + &
-                     (5.24110970D-06)*Ta*v*D_Tmrt*D_Tmrt + &
-                     (-8.75874982D-08)*Ta*Ta*v*D_Tmrt*D_Tmrt + &
-                     (-1.50743064D-09)*Ta*Ta*Ta*v*D_Tmrt*D_Tmrt + &
-                     (-1.56236307D-05)*v*v*D_Tmrt*D_Tmrt + &
-                     (-1.33895614D-07)*Ta*v*v*D_Tmrt*D_Tmrt + &
-                     (2.49709824D-09)*Ta*Ta*v*v*D_Tmrt*D_Tmrt + &
-                     (6.51711721D-07)*v*v*v*D_Tmrt*D_Tmrt + &
-                     (1.94960053D-09)*Ta*v*v*v*D_Tmrt*D_Tmrt + &
-                     (-1.00361113D-08)*v*v*v*v*D_Tmrt*D_Tmrt + &
-                     (-1.21206673D-05)*D_Tmrt*D_Tmrt*D_Tmrt + &
-                     (-2.18203660D-07)*Ta*D_Tmrt*D_Tmrt*D_Tmrt + &
-                     (7.51269482D-09)*Ta*Ta*D_Tmrt*D_Tmrt*D_Tmrt + &
-                     (9.79063848D-11)*Ta*Ta*Ta*D_Tmrt*D_Tmrt*D_Tmrt + &
-                     (1.25006734D-06)*v*D_Tmrt*D_Tmrt*D_Tmrt + &
-                     (-1.81584736D-09)*Ta*v*D_Tmrt*D_Tmrt*D_Tmrt + &
-                     (-3.52197671D-10)*Ta*Ta*v*D_Tmrt*D_Tmrt*D_Tmrt + &
-                     (-3.36514630D-08)*v*v*D_Tmrt*D_Tmrt*D_Tmrt + &
-                     (1.35908359D-10)*Ta*v*v*D_Tmrt*D_Tmrt*D_Tmrt + &
-                     (4.17032620D-10)*v*v*v*D_Tmrt*D_Tmrt*D_Tmrt + &
-                     (-1.30369025D-09)*D_Tmrt*D_Tmrt*D_Tmrt*D_Tmrt + &
-                     (4.13908461D-10)*Ta*D_Tmrt*D_Tmrt*D_Tmrt*D_Tmrt + &
-                     (9.22652254D-12)*Ta*Ta*D_Tmrt*D_Tmrt*D_Tmrt*D_Tmrt + &
-                     (-5.08220384D-09)*v*D_Tmrt*D_Tmrt*D_Tmrt*D_Tmrt + &
-                     (-2.24730961D-11)*Ta*v*D_Tmrt*D_Tmrt*D_Tmrt*D_Tmrt + &
-                     (1.17139133D-10)*v*v*D_Tmrt*D_Tmrt*D_Tmrt*D_Tmrt + &
-                     (6.62154879D-10)*D_Tmrt*D_Tmrt*D_Tmrt*D_Tmrt*D_Tmrt + &
-                     (4.03863260D-13)*Ta*D_Tmrt*D_Tmrt*D_Tmrt*D_Tmrt*D_Tmrt + &
-                     (1.95087203D-12)*v*D_Tmrt*D_Tmrt*D_Tmrt*D_Tmrt*D_Tmrt + &
-                     (-4.73602469D-12)*D_Tmrt*D_Tmrt*D_Tmrt*D_Tmrt*D_Tmrt*D_Tmrt + &
-                     (5.12733497D+00)*Pa + &
-                     (-3.12788561D-01)*Ta*Pa + &
-                     (-1.96701861D-02)*Ta*Ta*Pa + &
-                     (9.99690870D-04)*Ta*Ta*Ta*Pa + &
-                     (9.51738512D-06)*Ta*Ta*Ta*Ta*Pa + &
-                     (-4.66426341D-07)*Ta*Ta*Ta*Ta*Ta*Pa + &
-                     (5.48050612D-01)*v*Pa + &
-                     (-3.30552823D-03)*Ta*v*Pa + &
-                     (-1.64119440D-03)*Ta*Ta*v*Pa + &
-                     (-5.16670694D-06)*Ta*Ta*Ta*v*Pa + &
-                     (9.52692432D-07)*Ta*Ta*Ta*Ta*v*Pa + &
-                     (-4.29223622D-02)*v*v*Pa + &
-                     (5.00845667D-03)*Ta*v*v*Pa + &
-                     (1.00601257D-06)*Ta*Ta*v*v*Pa + &
-                     (-1.81748644D-06)*Ta*Ta*Ta*v*v*Pa + &
-                     (-1.25813502D-03)*v*v*v*Pa + &
-                     (-1.79330391D-04)*Ta*v*v*v*Pa + &
-                     (2.34994441D-06)*Ta*Ta*v*v*v*Pa + &
-                     (1.29735808D-04)*v*v*v*v*Pa + &
-                     (1.29064870D-06)*Ta*v*v*v*v*Pa + &
-                     (-2.28558686D-06)*v*v*v*v*v*Pa + &
-                     (-3.69476348D-02)*D_Tmrt*Pa + &
-                     (1.62325322D-03)*Ta*D_Tmrt*Pa + &
-                     (-3.14279680D-05)*Ta*Ta*D_Tmrt*Pa + &
-                     (2.59835559D-06)*Ta*Ta*Ta*D_Tmrt*Pa + &
-                     (-4.77136523D-08)*Ta*Ta*Ta*Ta*D_Tmrt*Pa + &
-                     (8.64203390D-03)*v*D_Tmrt*Pa + &
-                     (-6.87405181D-04)*Ta*v*D_Tmrt*Pa + &
-                     (-9.13863872D-06)*Ta*Ta*v*D_Tmrt*Pa + &
-                     (5.15916806D-07)*Ta*Ta*Ta*v*D_Tmrt*Pa + &
-                     (-3.59217476D-05)*v*v*D_Tmrt*Pa + &
-                     (3.28696511D-05)*Ta*v*v*D_Tmrt*Pa + &
-                     (-7.10542454D-07)*Ta*Ta*v*v*D_Tmrt*Pa + &
-                     (-1.24382300D-05)*v*v*v*D_Tmrt*Pa + &
-                     (-7.38584400D-09)*Ta*v*v*v*D_Tmrt*Pa + &
-                     (2.20609296D-07)*v*v*v*v*D_Tmrt*Pa + &
-                     (-7.32469180D-04)*D_Tmrt*D_Tmrt*Pa + &
-                     (-1.87381964D-05)*Ta*D_Tmrt*D_Tmrt*Pa + &
-                     (4.80925239D-06)*Ta*Ta*D_Tmrt*D_Tmrt*Pa + &
-                     (-8.75492040D-08)*Ta*Ta*Ta*D_Tmrt*D_Tmrt*Pa + &
-                     (2.77862930D-05)*v*D_Tmrt*D_Tmrt*Pa + &
-                     (-5.06004592D-06)*Ta*v*D_Tmrt*D_Tmrt*Pa + &
-                     (1.14325367D-07)*Ta*Ta*v*D_Tmrt*D_Tmrt*Pa + &
-                     (2.53016723D-06)*v*v*D_Tmrt*D_Tmrt*Pa + &
-                     (-1.72857035D-08)*Ta*v*v*D_Tmrt*D_Tmrt*Pa + &
-                     (-3.95079398D-08)*v*v*v*D_Tmrt*D_Tmrt*Pa + &
-                     (-3.59413173D-07)*D_Tmrt*D_Tmrt*D_Tmrt*Pa + &
-                     (7.04388046D-07)*Ta*D_Tmrt*D_Tmrt*D_Tmrt*Pa + &
-                     (-1.89309167D-08)*Ta*Ta*D_Tmrt*D_Tmrt*D_Tmrt*Pa + &
-                     (-4.79768731D-07)*v*D_Tmrt*D_Tmrt*D_Tmrt*Pa + &
-                     (7.96079978D-09)*Ta*v*D_Tmrt*D_Tmrt*D_Tmrt*Pa + &
-                     (1.62897058D-09)*v*v*D_Tmrt*D_Tmrt*D_Tmrt*Pa + &
-                     (3.94367674D-08)*D_Tmrt*D_Tmrt*D_Tmrt*D_Tmrt*Pa + &
-                     (-1.18566247D-09)*Ta*D_Tmrt*D_Tmrt*D_Tmrt*D_Tmrt*Pa + &
-                     (3.34678041D-10)*v*D_Tmrt*D_Tmrt*D_Tmrt*D_Tmrt*Pa + &
-                     (-1.15606447D-10)*D_Tmrt*D_Tmrt*D_Tmrt*D_Tmrt*D_Tmrt*Pa + &
-                     (-2.80626406D+00)*Pa*Pa + &
-                     (5.48712484D-01)*Ta*Pa*Pa + &
-                     (-3.99428410D-03)*Ta*Ta*Pa*Pa + &
-                     (-9.54009191D-04)*Ta*Ta*Ta*Pa*Pa + &
-                     (1.93090978D-05)*Ta*Ta*Ta*Ta*Pa*Pa + &
-                     (-3.08806365D-01)*v*Pa*Pa + &
-                     (1.16952364D-02)*Ta*v*Pa*Pa + &
-                     (4.95271903D-04)*Ta*Ta*v*Pa*Pa + &
-                     (-1.90710882D-05)*Ta*Ta*Ta*v*Pa*Pa + &
-                     (2.10787756D-03)*v*v*Pa*Pa + &
-                     (-6.98445738D-04)*Ta*v*v*Pa*Pa + &
-                     (2.30109073D-05)*Ta*Ta*v*v*Pa*Pa + &
-                     (4.17856590D-04)*v*v*v*Pa*Pa + &
-                     (-1.27043871D-05)*Ta*v*v*v*Pa*Pa + &
-                     (-3.04620472D-06)*v*v*v*v*Pa*Pa + &
-                     (5.14507424D-02)*D_Tmrt*Pa*Pa + &
-                     (-4.32510997D-03)*Ta*D_Tmrt*Pa*Pa + &
-                     (8.99281156D-05)*Ta*Ta*D_Tmrt*Pa*Pa + &
-                     (-7.14663943D-07)*Ta*Ta*Ta*D_Tmrt*Pa*Pa + &
-                     (-2.66016305D-04)*v*D_Tmrt*Pa*Pa + &
-                     (2.63789586D-04)*Ta*v*D_Tmrt*Pa*Pa + &
-                     (-7.01199003D-06)*Ta*Ta*v*D_Tmrt*Pa*Pa + &
-                     (-1.06823306D-04)*v*v*D_Tmrt*Pa*Pa + &
-                     (3.61341136D-06)*Ta*v*v*D_Tmrt*Pa*Pa + &
-                     (2.29748967D-07)*v*v*v*D_Tmrt*Pa*Pa + &
-                     (3.04788893D-04)*D_Tmrt*D_Tmrt*Pa*Pa + &
-                     (-6.42070836D-05)*Ta*D_Tmrt*D_Tmrt*Pa*Pa + &
-                     (1.16257971D-06)*Ta*Ta*D_Tmrt*D_Tmrt*Pa*Pa + &
-                     (7.68023384D-06)*v*D_Tmrt*D_Tmrt*Pa*Pa + &
-                     (-5.47446896D-07)*Ta*v*D_Tmrt*D_Tmrt*Pa*Pa + &
-                     (-3.59937910D-08)*v*v*D_Tmrt*D_Tmrt*Pa*Pa + &
-                     (-4.36497725D-06)*D_Tmrt*D_Tmrt*D_Tmrt*Pa*Pa + &
-                     (1.68737969D-07)*Ta*D_Tmrt*D_Tmrt*D_Tmrt*Pa*Pa + &
-                     (2.67489271D-08)*v*D_Tmrt*D_Tmrt*D_Tmrt*Pa*Pa + &
-                     (3.23926897D-09)*D_Tmrt*D_Tmrt*D_Tmrt*D_Tmrt*Pa*Pa + &
-                     (-3.53874123D-02)*Pa*Pa*Pa + &
-                     (-2.21201190D-01)*Ta*Pa*Pa*Pa + &
-                     (1.55126038D-02)*Ta*Ta*Pa*Pa*Pa + &
-                     (-2.63917279D-04)*Ta*Ta*Ta*Pa*Pa*Pa + &
-                     (4.53433455D-02)*v*Pa*Pa*Pa + &
-                     (-4.32943862D-03)*Ta*v*Pa*Pa*Pa + &
-                     (1.45389826D-04)*Ta*Ta*v*Pa*Pa*Pa + &
-                     (2.17508610D-04)*v*v*Pa*Pa*Pa + &
-                     (-6.66724702D-05)*Ta*v*v*Pa*Pa*Pa + &
-                     (3.33217140D-05)*v*v*v*Pa*Pa*Pa + &
-                     (-2.26921615D-03)*D_Tmrt*Pa*Pa*Pa + &
-                     (3.80261982D-04)*Ta*D_Tmrt*Pa*Pa*Pa + &
-                     (-5.45314314D-09)*Ta*Ta*D_Tmrt*Pa*Pa*Pa + &
-                     (-7.96355448D-04)*v*D_Tmrt*Pa*Pa*Pa + &
-                     (2.53458034D-05)*Ta*v*D_Tmrt*Pa*Pa*Pa + &
-                     (-6.31223658D-06)*v*v*D_Tmrt*Pa*Pa*Pa + &
-                     (3.02122035D-04)*D_Tmrt*D_Tmrt*Pa*Pa*Pa + &
-                     (-4.77403547D-06)*Ta*D_Tmrt*D_Tmrt*Pa*Pa*Pa + &
-                     (1.73825715D-06)*v*D_Tmrt*D_Tmrt*Pa*Pa*Pa + &
-                     (-4.09087898D-07)*D_Tmrt*D_Tmrt*D_Tmrt*Pa*Pa*Pa + &
-                     (6.14155345D-01)*Pa*Pa*Pa*Pa + &
-                     (-6.16755931D-02)*Ta*Pa*Pa*Pa*Pa + &
-                     (1.33374846D-03)*Ta*Ta*Pa*Pa*Pa*Pa + &
-                     (3.55375387D-03)*v*Pa*Pa*Pa*Pa + &
-                     (-5.13027851D-04)*Ta*v*Pa*Pa*Pa*Pa + &
-                     (1.02449757D-04)*v*v*Pa*Pa*Pa*Pa + &
-                     (-1.48526421D-03)*D_Tmrt*Pa*Pa*Pa*Pa + &
-                     (-4.11469183D-05)*Ta*D_Tmrt*Pa*Pa*Pa*Pa + &
-                     (-6.80434415D-06)*v*D_Tmrt*Pa*Pa*Pa*Pa + &
-                     (-9.77675906D-06)*D_Tmrt*D_Tmrt*Pa*Pa*Pa*Pa + &
-                     (8.82773108D-02)*Pa*Pa*Pa*Pa*Pa + &
-                     (-3.01859306D-03)*Ta*Pa*Pa*Pa*Pa*Pa + &
-                     (1.04452989D-03)*v*Pa*Pa*Pa*Pa*Pa + &
-                     (2.47090539D-04)*D_Tmrt*Pa*Pa*Pa*Pa*Pa + &
-                     (1.48348065D-03)*Pa*Pa*Pa*Pa*Pa*Pa
+      DO i = 1, size(Ta)
+         !~ type of input of the argument list
+         ! DOUBLE PRECISION Ta,va,Tmrt,ehPa,Pa,D_Tmrt,rh;
+         D_TMRT = Tmrt(i) - Ta(i)
+         !     !~ calculate vapour pressure from relative humidity
+         ! TODO: this is a significant slow down - we could inline a simpler version for
+         ! calculating es
+         PA = (rh(i)*es(Ta(i)))/1000.0  !~ use vapour pressure in kPa
+         !     !~ calculate 6th order polynomial as approximation
+         result_array(i) = Ta(i) + &
+                           (6.07562052D-01) + &
+                           (-2.27712343D-02)*Ta(i) + &
+                           (8.06470249D-04)*Ta(i)*Ta(i) + &
+                           (-1.54271372D-04)*Ta(i)*Ta(i)*Ta(i) + &
+                           (-3.24651735D-06)*Ta(i)*Ta(i)*Ta(i)*Ta(i) + &
+                           (7.32602852D-08)*Ta(i)*Ta(i)*Ta(i)*Ta(i)*Ta(i) + &
+                           (1.35959073D-09)*Ta(i)*Ta(i)*Ta(i)*Ta(i)*Ta(i)*Ta(i) + &
+                           (-2.25836520D+00)*v(i) + &
+                           (8.80326035D-02)*Ta(i)*v(i) + &
+                           (2.16844454D-03)*Ta(i)*Ta(i)*v(i) + &
+                           (-1.53347087D-05)*Ta(i)*Ta(i)*Ta(i)*v(i) + &
+                           (-5.72983704D-07)*Ta(i)*Ta(i)*Ta(i)*Ta(i)*v(i) + &
+                           (-2.55090145D-09)*Ta(i)*Ta(i)*Ta(i)*Ta(i)*Ta(i)*v(i) + &
+                           (-7.51269505D-01)*v(i)*v(i) + &
+                           (-4.08350271D-03)*Ta(i)*v(i)*v(i) + &
+                           (-5.21670675D-05)*Ta(i)*Ta(i)*v(i)*v(i) + &
+                           (1.94544667D-06)*Ta(i)*Ta(i)*Ta(i)*v(i)*v(i) + &
+                           (1.14099531D-08)*Ta(i)*Ta(i)*Ta(i)*Ta(i)*v(i)*v(i) + &
+                           (1.58137256D-01)*v(i)*v(i)*v(i) + &
+                           (-6.57263143D-05)*Ta(i)*v(i)*v(i)*v(i) + &
+                           (2.22697524D-07)*Ta(i)*Ta(i)*v(i)*v(i)*v(i) + &
+                           (-4.16117031D-08)*Ta(i)*Ta(i)*Ta(i)*v(i)*v(i)*v(i) + &
+                           (-1.27762753D-02)*v(i)*v(i)*v(i)*v(i) + &
+                           (9.66891875D-06)*Ta(i)*v(i)*v(i)*v(i)*v(i) + &
+                           (2.52785852D-09)*Ta(i)*Ta(i)*v(i)*v(i)*v(i)*v(i) + &
+                           (4.56306672D-04)*v(i)*v(i)*v(i)*v(i)*v(i) + &
+                           (-1.74202546D-07)*Ta(i)*v(i)*v(i)*v(i)*v(i)*v(i) + &
+                           (-5.91491269D-06)*v(i)*v(i)*v(i)*v(i)*v(i)*v(i) + &
+                           (3.98374029D-01)*D_Tmrt + &
+                           (1.83945314D-04)*Ta(i)*D_Tmrt + &
+                           (-1.73754510D-04)*Ta(i)*Ta(i)*D_Tmrt + &
+                           (-7.60781159D-07)*Ta(i)*Ta(i)*Ta(i)*D_Tmrt + &
+                           (3.77830287D-08)*Ta(i)*Ta(i)*Ta(i)*Ta(i)*D_Tmrt + &
+                           (5.43079673D-10)*Ta(i)*Ta(i)*Ta(i)*Ta(i)*Ta(i)*D_Tmrt + &
+                           (-2.00518269D-02)*v(i)*D_Tmrt + &
+                           (8.92859837D-04)*Ta(i)*v(i)*D_Tmrt + &
+                           (3.45433048D-06)*Ta(i)*Ta(i)*v(i)*D_Tmrt + &
+                           (-3.77925774D-07)*Ta(i)*Ta(i)*Ta(i)*v(i)*D_Tmrt + &
+                           (-1.69699377D-09)*Ta(i)*Ta(i)*Ta(i)*Ta(i)*v(i)*D_Tmrt + &
+                           (1.69992415D-04)*v(i)*v(i)*D_Tmrt + &
+                           (-4.99204314D-05)*Ta(i)*v(i)*v(i)*D_Tmrt + &
+                           (2.47417178D-07)*Ta(i)*Ta(i)*v(i)*v(i)*D_Tmrt + &
+                           (1.07596466D-08)*Ta(i)*Ta(i)*Ta(i)*v(i)*v(i)*D_Tmrt + &
+                           (8.49242932D-05)*v(i)*v(i)*v(i)*D_Tmrt + &
+                           (1.35191328D-06)*Ta(i)*v(i)*v(i)*v(i)*D_Tmrt + &
+                           (-6.21531254D-09)*Ta(i)*Ta(i)*v(i)*v(i)*v(i)*D_Tmrt + &
+                           (-4.99410301D-06)*v(i)*v(i)*v(i)*v(i)*D_Tmrt + &
+                           (-1.89489258D-08)*Ta(i)*v(i)*v(i)*v(i)*v(i)*D_Tmrt + &
+                           (8.15300114D-08)*v(i)*v(i)*v(i)*v(i)*v(i)*D_Tmrt + &
+                           (7.55043090D-04)*D_Tmrt*D_Tmrt + &
+                           (-5.65095215D-05)*Ta(i)*D_Tmrt*D_Tmrt + &
+                           (-4.52166564D-07)*Ta(i)*Ta(i)*D_Tmrt*D_Tmrt + &
+                           (2.46688878D-08)*Ta(i)*Ta(i)*Ta(i)*D_Tmrt*D_Tmrt + &
+                           (2.42674348D-10)*Ta(i)*Ta(i)*Ta(i)*Ta(i)*D_Tmrt*D_Tmrt + &
+                           (1.54547250D-04)*v(i)*D_Tmrt*D_Tmrt + &
+                           (5.24110970D-06)*Ta(i)*v(i)*D_Tmrt*D_Tmrt + &
+                           (-8.75874982D-08)*Ta(i)*Ta(i)*v(i)*D_Tmrt*D_Tmrt + &
+                           (-1.50743064D-09)*Ta(i)*Ta(i)*Ta(i)*v(i)*D_Tmrt*D_Tmrt + &
+                           (-1.56236307D-05)*v(i)*v(i)*D_Tmrt*D_Tmrt + &
+                           (-1.33895614D-07)*Ta(i)*v(i)*v(i)*D_Tmrt*D_Tmrt + &
+                           (2.49709824D-09)*Ta(i)*Ta(i)*v(i)*v(i)*D_Tmrt*D_Tmrt + &
+                           (6.51711721D-07)*v(i)*v(i)*v(i)*D_Tmrt*D_Tmrt + &
+                           (1.94960053D-09)*Ta(i)*v(i)*v(i)*v(i)*D_Tmrt*D_Tmrt + &
+                           (-1.00361113D-08)*v(i)*v(i)*v(i)*v(i)*D_Tmrt*D_Tmrt + &
+                           (-1.21206673D-05)*D_Tmrt*D_Tmrt*D_Tmrt + &
+                           (-2.18203660D-07)*Ta(i)*D_Tmrt*D_Tmrt*D_Tmrt + &
+                           (7.51269482D-09)*Ta(i)*Ta(i)*D_Tmrt*D_Tmrt*D_Tmrt + &
+                           (9.79063848D-11)*Ta(i)*Ta(i)*Ta(i)*D_Tmrt*D_Tmrt*D_Tmrt + &
+                           (1.25006734D-06)*v(i)*D_Tmrt*D_Tmrt*D_Tmrt + &
+                           (-1.81584736D-09)*Ta(i)*v(i)*D_Tmrt*D_Tmrt*D_Tmrt + &
+                           (-3.52197671D-10)*Ta(i)*Ta(i)*v(i)*D_Tmrt*D_Tmrt*D_Tmrt + &
+                           (-3.36514630D-08)*v(i)*v(i)*D_Tmrt*D_Tmrt*D_Tmrt + &
+                           (1.35908359D-10)*Ta(i)*v(i)*v(i)*D_Tmrt*D_Tmrt*D_Tmrt + &
+                           (4.17032620D-10)*v(i)*v(i)*v(i)*D_Tmrt*D_Tmrt*D_Tmrt + &
+                           (-1.30369025D-09)*D_Tmrt*D_Tmrt*D_Tmrt*D_Tmrt + &
+                           (4.13908461D-10)*Ta(i)*D_Tmrt*D_Tmrt*D_Tmrt*D_Tmrt + &
+                           (9.22652254D-12)*Ta(i)*Ta(i)*D_Tmrt*D_Tmrt*D_Tmrt*D_Tmrt + &
+                           (-5.08220384D-09)*v(i)*D_Tmrt*D_Tmrt*D_Tmrt*D_Tmrt + &
+                           (-2.24730961D-11)*Ta(i)*v(i)*D_Tmrt*D_Tmrt*D_Tmrt*D_Tmrt + &
+                           (1.17139133D-10)*v(i)*v(i)*D_Tmrt*D_Tmrt*D_Tmrt*D_Tmrt + &
+                           (6.62154879D-10)*D_Tmrt*D_Tmrt*D_Tmrt*D_Tmrt*D_Tmrt + &
+                           (4.03863260D-13)*Ta(i)*D_Tmrt*D_Tmrt*D_Tmrt*D_Tmrt*D_Tmrt + &
+                           (1.95087203D-12)*v(i)*D_Tmrt*D_Tmrt*D_Tmrt*D_Tmrt*D_Tmrt + &
+                           (-4.73602469D-12)*D_Tmrt*D_Tmrt*D_Tmrt*D_Tmrt*D_Tmrt*D_Tmrt + &
+                           (5.12733497D+00)*Pa + &
+                           (-3.12788561D-01)*Ta(i)*Pa + &
+                           (-1.96701861D-02)*Ta(i)*Ta(i)*Pa + &
+                           (9.99690870D-04)*Ta(i)*Ta(i)*Ta(i)*Pa + &
+                           (9.51738512D-06)*Ta(i)*Ta(i)*Ta(i)*Ta(i)*Pa + &
+                           (-4.66426341D-07)*Ta(i)*Ta(i)*Ta(i)*Ta(i)*Ta(i)*Pa + &
+                           (5.48050612D-01)*v(i)*Pa + &
+                           (-3.30552823D-03)*Ta(i)*v(i)*Pa + &
+                           (-1.64119440D-03)*Ta(i)*Ta(i)*v(i)*Pa + &
+                           (-5.16670694D-06)*Ta(i)*Ta(i)*Ta(i)*v(i)*Pa + &
+                           (9.52692432D-07)*Ta(i)*Ta(i)*Ta(i)*Ta(i)*v(i)*Pa + &
+                           (-4.29223622D-02)*v(i)*v(i)*Pa + &
+                           (5.00845667D-03)*Ta(i)*v(i)*v(i)*Pa + &
+                           (1.00601257D-06)*Ta(i)*Ta(i)*v(i)*v(i)*Pa + &
+                           (-1.81748644D-06)*Ta(i)*Ta(i)*Ta(i)*v(i)*v(i)*Pa + &
+                           (-1.25813502D-03)*v(i)*v(i)*v(i)*Pa + &
+                           (-1.79330391D-04)*Ta(i)*v(i)*v(i)*v(i)*Pa + &
+                           (2.34994441D-06)*Ta(i)*Ta(i)*v(i)*v(i)*v(i)*Pa + &
+                           (1.29735808D-04)*v(i)*v(i)*v(i)*v(i)*Pa + &
+                           (1.29064870D-06)*Ta(i)*v(i)*v(i)*v(i)*v(i)*Pa + &
+                           (-2.28558686D-06)*v(i)*v(i)*v(i)*v(i)*v(i)*Pa + &
+                           (-3.69476348D-02)*D_Tmrt*Pa + &
+                           (1.62325322D-03)*Ta(i)*D_Tmrt*Pa + &
+                           (-3.14279680D-05)*Ta(i)*Ta(i)*D_Tmrt*Pa + &
+                           (2.59835559D-06)*Ta(i)*Ta(i)*Ta(i)*D_Tmrt*Pa + &
+                           (-4.77136523D-08)*Ta(i)*Ta(i)*Ta(i)*Ta(i)*D_Tmrt*Pa + &
+                           (8.64203390D-03)*v(i)*D_Tmrt*Pa + &
+                           (-6.87405181D-04)*Ta(i)*v(i)*D_Tmrt*Pa + &
+                           (-9.13863872D-06)*Ta(i)*Ta(i)*v(i)*D_Tmrt*Pa + &
+                           (5.15916806D-07)*Ta(i)*Ta(i)*Ta(i)*v(i)*D_Tmrt*Pa + &
+                           (-3.59217476D-05)*v(i)*v(i)*D_Tmrt*Pa + &
+                           (3.28696511D-05)*Ta(i)*v(i)*v(i)*D_Tmrt*Pa + &
+                           (-7.10542454D-07)*Ta(i)*Ta(i)*v(i)*v(i)*D_Tmrt*Pa + &
+                           (-1.24382300D-05)*v(i)*v(i)*v(i)*D_Tmrt*Pa + &
+                           (-7.38584400D-09)*Ta(i)*v(i)*v(i)*v(i)*D_Tmrt*Pa + &
+                           (2.20609296D-07)*v(i)*v(i)*v(i)*v(i)*D_Tmrt*Pa + &
+                           (-7.32469180D-04)*D_Tmrt*D_Tmrt*Pa + &
+                           (-1.87381964D-05)*Ta(i)*D_Tmrt*D_Tmrt*Pa + &
+                           (4.80925239D-06)*Ta(i)*Ta(i)*D_Tmrt*D_Tmrt*Pa + &
+                           (-8.75492040D-08)*Ta(i)*Ta(i)*Ta(i)*D_Tmrt*D_Tmrt*Pa + &
+                           (2.77862930D-05)*v(i)*D_Tmrt*D_Tmrt*Pa + &
+                           (-5.06004592D-06)*Ta(i)*v(i)*D_Tmrt*D_Tmrt*Pa + &
+                           (1.14325367D-07)*Ta(i)*Ta(i)*v(i)*D_Tmrt*D_Tmrt*Pa + &
+                           (2.53016723D-06)*v(i)*v(i)*D_Tmrt*D_Tmrt*Pa + &
+                           (-1.72857035D-08)*Ta(i)*v(i)*v(i)*D_Tmrt*D_Tmrt*Pa + &
+                           (-3.95079398D-08)*v(i)*v(i)*v(i)*D_Tmrt*D_Tmrt*Pa + &
+                           (-3.59413173D-07)*D_Tmrt*D_Tmrt*D_Tmrt*Pa + &
+                           (7.04388046D-07)*Ta(i)*D_Tmrt*D_Tmrt*D_Tmrt*Pa + &
+                           (-1.89309167D-08)*Ta(i)*Ta(i)*D_Tmrt*D_Tmrt*D_Tmrt*Pa + &
+                           (-4.79768731D-07)*v(i)*D_Tmrt*D_Tmrt*D_Tmrt*Pa + &
+                           (7.96079978D-09)*Ta(i)*v(i)*D_Tmrt*D_Tmrt*D_Tmrt*Pa + &
+                           (1.62897058D-09)*v(i)*v(i)*D_Tmrt*D_Tmrt*D_Tmrt*Pa + &
+                           (3.94367674D-08)*D_Tmrt*D_Tmrt*D_Tmrt*D_Tmrt*Pa + &
+                           (-1.18566247D-09)*Ta(i)*D_Tmrt*D_Tmrt*D_Tmrt*D_Tmrt*Pa + &
+                           (3.34678041D-10)*v(i)*D_Tmrt*D_Tmrt*D_Tmrt*D_Tmrt*Pa + &
+                           (-1.15606447D-10)*D_Tmrt*D_Tmrt*D_Tmrt*D_Tmrt*D_Tmrt*Pa + &
+                           (-2.80626406D+00)*Pa*Pa + &
+                           (5.48712484D-01)*Ta(i)*Pa*Pa + &
+                           (-3.99428410D-03)*Ta(i)*Ta(i)*Pa*Pa + &
+                           (-9.54009191D-04)*Ta(i)*Ta(i)*Ta(i)*Pa*Pa + &
+                           (1.93090978D-05)*Ta(i)*Ta(i)*Ta(i)*Ta(i)*Pa*Pa + &
+                           (-3.08806365D-01)*v(i)*Pa*Pa + &
+                           (1.16952364D-02)*Ta(i)*v(i)*Pa*Pa + &
+                           (4.95271903D-04)*Ta(i)*Ta(i)*v(i)*Pa*Pa + &
+                           (-1.90710882D-05)*Ta(i)*Ta(i)*Ta(i)*v(i)*Pa*Pa + &
+                           (2.10787756D-03)*v(i)*v(i)*Pa*Pa + &
+                           (-6.98445738D-04)*Ta(i)*v(i)*v(i)*Pa*Pa + &
+                           (2.30109073D-05)*Ta(i)*Ta(i)*v(i)*v(i)*Pa*Pa + &
+                           (4.17856590D-04)*v(i)*v(i)*v(i)*Pa*Pa + &
+                           (-1.27043871D-05)*Ta(i)*v(i)*v(i)*v(i)*Pa*Pa + &
+                           (-3.04620472D-06)*v(i)*v(i)*v(i)*v(i)*Pa*Pa + &
+                           (5.14507424D-02)*D_Tmrt*Pa*Pa + &
+                           (-4.32510997D-03)*Ta(i)*D_Tmrt*Pa*Pa + &
+                           (8.99281156D-05)*Ta(i)*Ta(i)*D_Tmrt*Pa*Pa + &
+                           (-7.14663943D-07)*Ta(i)*Ta(i)*Ta(i)*D_Tmrt*Pa*Pa + &
+                           (-2.66016305D-04)*v(i)*D_Tmrt*Pa*Pa + &
+                           (2.63789586D-04)*Ta(i)*v(i)*D_Tmrt*Pa*Pa + &
+                           (-7.01199003D-06)*Ta(i)*Ta(i)*v(i)*D_Tmrt*Pa*Pa + &
+                           (-1.06823306D-04)*v(i)*v(i)*D_Tmrt*Pa*Pa + &
+                           (3.61341136D-06)*Ta(i)*v(i)*v(i)*D_Tmrt*Pa*Pa + &
+                           (2.29748967D-07)*v(i)*v(i)*v(i)*D_Tmrt*Pa*Pa + &
+                           (3.04788893D-04)*D_Tmrt*D_Tmrt*Pa*Pa + &
+                           (-6.42070836D-05)*Ta(i)*D_Tmrt*D_Tmrt*Pa*Pa + &
+                           (1.16257971D-06)*Ta(i)*Ta(i)*D_Tmrt*D_Tmrt*Pa*Pa + &
+                           (7.68023384D-06)*v(i)*D_Tmrt*D_Tmrt*Pa*Pa + &
+                           (-5.47446896D-07)*Ta(i)*v(i)*D_Tmrt*D_Tmrt*Pa*Pa + &
+                           (-3.59937910D-08)*v(i)*v(i)*D_Tmrt*D_Tmrt*Pa*Pa + &
+                           (-4.36497725D-06)*D_Tmrt*D_Tmrt*D_Tmrt*Pa*Pa + &
+                           (1.68737969D-07)*Ta(i)*D_Tmrt*D_Tmrt*D_Tmrt*Pa*Pa + &
+                           (2.67489271D-08)*v(i)*D_Tmrt*D_Tmrt*D_Tmrt*Pa*Pa + &
+                           (3.23926897D-09)*D_Tmrt*D_Tmrt*D_Tmrt*D_Tmrt*Pa*Pa + &
+                           (-3.53874123D-02)*Pa*Pa*Pa + &
+                           (-2.21201190D-01)*Ta(i)*Pa*Pa*Pa + &
+                           (1.55126038D-02)*Ta(i)*Ta(i)*Pa*Pa*Pa + &
+                           (-2.63917279D-04)*Ta(i)*Ta(i)*Ta(i)*Pa*Pa*Pa + &
+                           (4.53433455D-02)*v(i)*Pa*Pa*Pa + &
+                           (-4.32943862D-03)*Ta(i)*v(i)*Pa*Pa*Pa + &
+                           (1.45389826D-04)*Ta(i)*Ta(i)*v(i)*Pa*Pa*Pa + &
+                           (2.17508610D-04)*v(i)*v(i)*Pa*Pa*Pa + &
+                           (-6.66724702D-05)*Ta(i)*v(i)*v(i)*Pa*Pa*Pa + &
+                           (3.33217140D-05)*v(i)*v(i)*v(i)*Pa*Pa*Pa + &
+                           (-2.26921615D-03)*D_Tmrt*Pa*Pa*Pa + &
+                           (3.80261982D-04)*Ta(i)*D_Tmrt*Pa*Pa*Pa + &
+                           (-5.45314314D-09)*Ta(i)*Ta(i)*D_Tmrt*Pa*Pa*Pa + &
+                           (-7.96355448D-04)*v(i)*D_Tmrt*Pa*Pa*Pa + &
+                           (2.53458034D-05)*Ta(i)*v(i)*D_Tmrt*Pa*Pa*Pa + &
+                           (-6.31223658D-06)*v(i)*v(i)*D_Tmrt*Pa*Pa*Pa + &
+                           (3.02122035D-04)*D_Tmrt*D_Tmrt*Pa*Pa*Pa + &
+                           (-4.77403547D-06)*Ta(i)*D_Tmrt*D_Tmrt*Pa*Pa*Pa + &
+                           (1.73825715D-06)*v(i)*D_Tmrt*D_Tmrt*Pa*Pa*Pa + &
+                           (-4.09087898D-07)*D_Tmrt*D_Tmrt*D_Tmrt*Pa*Pa*Pa + &
+                           (6.14155345D-01)*Pa*Pa*Pa*Pa + &
+                           (-6.16755931D-02)*Ta(i)*Pa*Pa*Pa*Pa + &
+                           (1.33374846D-03)*Ta(i)*Ta(i)*Pa*Pa*Pa*Pa + &
+                           (3.55375387D-03)*v(i)*Pa*Pa*Pa*Pa + &
+                           (-5.13027851D-04)*Ta(i)*v(i)*Pa*Pa*Pa*Pa + &
+                           (1.02449757D-04)*v(i)*v(i)*Pa*Pa*Pa*Pa + &
+                           (-1.48526421D-03)*D_Tmrt*Pa*Pa*Pa*Pa + &
+                           (-4.11469183D-05)*Ta(i)*D_Tmrt*Pa*Pa*Pa*Pa + &
+                           (-6.80434415D-06)*v(i)*D_Tmrt*Pa*Pa*Pa*Pa + &
+                           (-9.77675906D-06)*D_Tmrt*D_Tmrt*Pa*Pa*Pa*Pa + &
+                           (8.82773108D-02)*Pa*Pa*Pa*Pa*Pa + &
+                           (-3.01859306D-03)*Ta(i)*Pa*Pa*Pa*Pa*Pa + &
+                           (1.04452989D-03)*v(i)*Pa*Pa*Pa*Pa*Pa + &
+                           (2.47090539D-04)*D_Tmrt*Pa*Pa*Pa*Pa*Pa + &
+                           (1.48348065D-03)*Pa*Pa*Pa*Pa*Pa*Pa
+      END DO
    END
-
-   FUNCTION tmrt_forced_convection(ta, tg, v, d, e)
-      IMPLICIT NONE
-      REAL(kind=8), INTENT(IN) :: tg(:), ta(:), v(:), d(:), e(:)
-      REAL(kind=8) :: tmrt_forced_convection(size(tg))
-      tmrt_forced_convection = ((((tg + 273)**4) + (((1.1*(10**8))*v**0.6)/(e*(d**0.4)))*(tg - ta))**0.25) - 273
-   END FUNCTION tmrt_forced_convection
-
-   FUNCTION tmrt_natural_convection(ta, tg, d, e)
-      IMPLICIT NONE
-      REAL(kind=8), INTENT(IN) :: tg(:), ta(:), d(:), e(:)
-      REAL(kind=8) :: tmrt_natural_convection(size(tg))
-      tmrt_natural_convection = ((((tg + 273)**4) + ((0.25*10)**8/e)*((ABS(tg - ta)/d)**0.25)*(tg - ta))**0.25) - 273
-   END FUNCTION tmrt_natural_convection
 
    FUNCTION mrt(ta, tg, v, d, e)
       IMPLICIT NONE
       REAL(kind=8), INTENT(IN) :: tg(:), v(:), ta(:), d(:), e(:)
-      REAL(kind=8) :: mrt(size(tg)), hcg_natural(size(tg)), hcg_forced(size(tg))
+      REAL(kind=8) :: mrt(size(tg))
+      REAL(kind=8) :: hcg_natural, hcg_forced
+      INTEGER :: i
 
       ! calculate both versions of hgc and check which one is larger
-      hcg_natural = (1.4*(ABS(tg - ta)/0.15)**0.25)
-      hcg_forced = (6.3*((v**0.6)/(d**0.4)))
-      mrt = MERGE( &
-            tmrt_natural_convection(ta, tg, d, e), &
-            tmrt_forced_convection(ta, tg, v, d, e), &
-            hcg_natural > hcg_forced &
-            )
+      DO i = 1, size(tg)
+         hcg_natural = (1.4*(ABS(tg(i) - ta(i))/0.15)**0.25)
+         hcg_forced = (6.3*((v(i)**0.6)/(d(i)**0.4)))
+         IF (hcg_natural > hcg_forced) THEN
+            ! natural convection
+            mrt(i) = ((((tg(i) + 273)**4) + ((0.25*10)**8/e(i))*((ABS(tg(i) - ta(i))/d(i))**0.25)*(tg(i) - ta(i)))**0.25) - 273
+         ELSE
+            ! forced convection
+            mrt(i) = ((((tg(i) + 273)**4) + (((1.1*(10**8))*v(i)**0.6)/(e(i)*(d(i)**0.4)))*(tg(i) - ta(i)))**0.25) - 273
+         END IF
+      END DO
    END FUNCTION mrt
 
    FUNCTION twb(ta, rh)
@@ -949,9 +929,8 @@ CONTAINS
       IMPLICIT NONE
       REAL(kind=8), INTENT(IN) :: ta(:), rh(:)
       REAL(kind=8) :: heat_index(size(ta))
-      REAL(kind=8) :: missing(size(ta))
-      missing = ieee_value(ta, ieee_quiet_nan)
-
+      INTEGER i
+      ! missing = ieee_value(ta, ieee_quiet_nan)
       ! coefficients for °C are defined here: https://en.wikipedia.org/wiki/Heat_index
       ! or here: https://pmc.ncbi.nlm.nih.gov/articles/PMC8296236/
       ! Fahrenheit Formula + conversion to and from °F
@@ -959,65 +938,47 @@ CONTAINS
       !  - 0.22475541*ta_f*rh - 6.83783D-3*ta_f**2 &
       !  - 5.481717D-2*rh**2 + 1.22874D-3*ta_f**2*rh &
       !  + 8.5282D-4*ta_f*rh**2 - 1.99D-6*ta_f**2*rh**2, &
-      heat_index = MERGE( &
-                   missing, &
-                   c1 + c2*ta + c3*rh + c4*ta*rh + &
-                   c5*ta**2 + c6*rh**2 + &
-                   c7*ta**2*rh + c8*ta*rh**2 + &
-                   c9*ta**2*rh**2, &
-                   (ta < 26.666) .OR. (rh < 40) &
-                   )
+      DO i = 1, size(ta)
+         IF ((ta(i) < 26.666) .OR. (rh(i) < 40)) THEN
+            heat_index(i) = ieee_value(ta(i), ieee_quiet_nan)
+         ELSE
+            heat_index(i) = c1 + c2*ta(i) + c3*rh(i) + c4*ta(i)*rh(i) + &
+                            c5*ta(i)**2 + c6*rh(i)**2 + &
+                            c7*ta(i)**2*rh(i) + c8*ta(i)*rh(i)**2 + &
+                            c9*ta(i)**2*rh(i)**2
+         END IF
+      END DO
 
    END FUNCTION heat_index
-
-   FUNCTION c2f(celsius)
-      ! https://www.weather.gov/media/epz/wxcalc/tempConvert.pdf
-      IMPLICIT NONE
-      REAL(kind=8), INTENT(IN) :: celsius(:)
-      REAL(kind=8) :: c2f(size(celsius))
-      c2f = ((9.0/5.0)*celsius) + 32
-   END FUNCTION c2f
-
-   FUNCTION f2c(fahrenheit)
-      !https://www.weather.gov/media/epz/wxcalc/tempConvert.pdf
-      IMPLICIT NONE
-      REAL(kind=8), INTENT(IN) :: fahrenheit(:)
-      REAL(kind=8) :: f2c(size(fahrenheit))
-      f2c = (5.0/9.0)*(fahrenheit - 32.0)
-   END FUNCTION f2c
 
    FUNCTION heat_index_extended(ta, rh)
       ! https://www.wpc.ncep.noaa.gov/html/heatindex_equation.shtml
       IMPLICIT NONE
       REAL(kind=8), INTENT(IN) :: ta(:), rh(:)
       REAL(kind=8) :: heat_index_extended(size(ta))
-      REAL(kind=8) :: ta_f(size(ta))
+      REAL(kind=8) :: ta_f
+      INTEGER i
 
-      !convert °C to °F since HI is defined in Fahrenheit
-      ta_f = c2f(ta)
-      heat_index_extended = 0.5*(ta_f + 61.0 + ((ta_f - 68.0)*1.2) + (rh*0.094))
-      heat_index_extended = MERGE( &
-                            -42.379 + 2.04901523*ta_f + 10.14333127*rh &
-                            - 0.22475541*ta_f*rh - 6.83783D-3*ta_f**2 &
-                            - 5.481717D-2*rh**2 + 1.22874D-3*ta_f**2*rh &
-                            + 8.5282D-4*ta_f*rh**2 - 1.99D-6*ta_f**2*rh**2, &
-                            heat_index_extended, &
-                            ((heat_index_extended + ta_f)/2.0) >= 80.0 &
-                            )
-      ! 1st adj
-      heat_index_extended = MERGE( &
-                            heat_index_extended - ((13.0 - rh)/4.0)*SQRT((17 - ABS(ta_f - 95.0))/17.0), &
-                            heat_index_extended, &
-                            rh < 13.0 .AND. ta_f > 26.666 .AND. ta_f < 44.4 &
-                            )
-      !2nd adjustment
-      heat_index_extended = MERGE( &
-                            heat_index_extended + (((rh - 85.0)/10)*(87 - ta_f)/5), &
-                            heat_index_extended, &
-                            rh > 85.0 .AND. ta_f > 80.0 .AND. ta_f < 87.0 &
-                            )
-      ! convert back to °C
-      heat_index_extended = f2c(heat_index_extended)
+      DO i = 1, size(ta)
+         !convert °C to °F since HI is defined in Fahrenheit
+         ta_f = ((9.0/5.0)*ta(i)) + 32
+         heat_index_extended(i) = 0.5*(ta_f + 61.0 + ((ta_f - 68.0)*1.2) + (rh(i)*0.094))
+         IF (((heat_index_extended(i) + ta_f)/2.0 >= 80.0)) THEN
+            heat_index_extended(i) = -42.379 + 2.04901523*ta_f + 10.14333127*rh(i) &
+                                     - 0.22475541*ta_f*rh(i) - 6.83783D-3*ta_f**2 &
+                                     - 5.481717D-2*rh(i)**2 + 1.22874D-3*ta_f**2*rh(i) &
+                                     + 8.5282D-4*ta_f*rh(i)**2 - 1.99D-6*ta_f**2*rh(i)**2
+         END IF
+         IF (rh(i) < 13.0 .AND. ta_f > 80 .AND. ta_f < 112) THEN
+            heat_index_extended(i) = heat_index_extended(i) - ((13.0 - rh(i))/4.0)*SQRT((17 - ABS(ta_f - 95.0))/17.0)
+         END IF
+         ! 2nd adjustment
+         IF (rh(i) > 85.0 .AND. ta_f > 80.0 .AND. ta_f < 87.0) THEN
+            heat_index_extended(i) = heat_index_extended(i) + (((rh(i) - 85.0)/10)*(87 - ta_f)/5.0)
+         END IF
+         ! convert back to °C
+         heat_index_extended(i) = (5.0/9.0)*(heat_index_extended(i) - 32.0)
+      END DO
    END FUNCTION heat_index_extended
 
 END MODULE thermal_comfort_mod

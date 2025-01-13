@@ -500,10 +500,10 @@ def test_heat_index_scalar_values(f, ta, rh, expected):
 @pytest.mark.parametrize(
     ('ta', 'rh', 'expected'),
     (
-        (35, 10, 32.333),
+        (35, 10, 31.916),
         (30, 90, 40.774),
         # with fahrenheit conditions
-        (_f2c(95), 10, 32.333),
+        (_f2c(95), 10, 31.916),
         (_f2c(86), 90, 40.774),
     ),
 )
