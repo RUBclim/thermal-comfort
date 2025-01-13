@@ -91,6 +91,7 @@
 
 MODULE thermal_comfort_mod
    USE, INTRINSIC :: ieee_arithmetic
+   USE omp_lib
    IMPLICIT NONE
 
    PRIVATE
@@ -221,9 +222,10 @@ CONTAINS
       fcl = 1.15
       pos = 1
       sex = 1
-      ! calculate vapor pressure from rh
 
+      !$OMP PARALLEL DO PRIVATE(vpa)
       do i = 1, size(ta)
+         ! calculate vapor pressure from rh
          vpa = (rh(i)*es(Ta(i)))/100.0
          ! this never converges if a value is nan so  we need to check if any of the values are nan
          IF (ieee_is_nan(ta(i)) .OR. ieee_is_nan(rh(i)) .OR. ieee_is_nan(tmrt(i)) .OR. ieee_is_nan(v(i)) .OR. &
@@ -241,6 +243,7 @@ CONTAINS
          CALL pet_iteration(acl(i), adu(i), aeff(i), esw(i), facl(i), feff(i), p(i), rdcl(i), &
                             rdsk(i), rtv(i), ta(i), tcl(i), tsk(i), tx(i), vpts(i), wetsk(i))
       end do
+      !$OMP END PARALLEL DO
    END SUBROUTINE pet_static
 
 !------------------------------------------------------------------------------!
@@ -663,6 +666,7 @@ CONTAINS
       real(kind=8) :: result_array(size(Ta))
       integer i
 
+      !$OMP PARALLEL DO PRIVATE(d_tmrt, PA)
       DO i = 1, size(Ta)
          !~ type of input of the argument list
          ! DOUBLE PRECISION Ta,va,Tmrt,ehPa,Pa,D_Tmrt,rh;
@@ -884,6 +888,7 @@ CONTAINS
                            (2.47090539D-04)*D_Tmrt*Pa*Pa*Pa*Pa*Pa + &
                            (1.48348065D-03)*Pa*Pa*Pa*Pa*Pa*Pa
       END DO
+      !$OMP END PARALLEL DO
    END
 
    FUNCTION mean_radiant_temp(ta, tg, v, d, e)
@@ -894,6 +899,7 @@ CONTAINS
       INTEGER :: i
 
       ! calculate both versions of hgc and check which one is larger
+      !$OMP PARALLEL DO PRIVATE(hcg_natural, hcg_forced)
       DO i = 1, size(tg)
          hcg_natural = (1.4*(ABS(tg(i) - ta(i))/0.15)**0.25)
          hcg_forced = (6.3*((v(i)**0.6)/(d(i)**0.4)))
@@ -907,15 +913,19 @@ CONTAINS
                                                            (e(i)*(d(i)**0.4)))*(tg(i) - ta(i)))**0.25) - 273
          END IF
       END DO
+      !$OMP END PARALLEL DO
+
    END FUNCTION mean_radiant_temp
 
    FUNCTION wet_bulb_temp(ta, rh)
       IMPLICIT NONE
       REAL(kind=8), INTENT(IN) :: ta(:), rh(:)
       REAL(kind=8) :: wet_bulb_temp(size(ta))
+      !$OMP WORKSHARE
       wet_bulb_temp = ta*atan(0.151977*(rh + 8.313659)**0.5) + &
                       atan(ta + rh) - atan(rh - 1.676331) + 0.00391838* &
                       (rh)**1.5*atan(0.023101*rh) - 4.686035
+      !$OMP END WORKSHARE
    END FUNCTION wet_bulb_temp
 
    FUNCTION heat_index(ta, rh)
@@ -945,6 +955,7 @@ CONTAINS
       !  - 0.22475541*ta_f*rh - 6.83783D-3*ta_f**2 &
       !  - 5.481717D-2*rh**2 + 1.22874D-3*ta_f**2*rh &
       !  + 8.5282D-4*ta_f*rh**2 - 1.99D-6*ta_f**2*rh**2, &
+      !$OMP PARALLEL DO
       DO i = 1, size(ta)
          IF ((ta(i) < 26.666) .OR. (rh(i) < 40)) THEN
             heat_index(i) = ieee_value(ta(i), ieee_quiet_nan)
@@ -955,6 +966,7 @@ CONTAINS
                             c9*ta(i)**2*rh(i)**2
          END IF
       END DO
+      !$OMP END PARALLEL DO
 
    END FUNCTION heat_index
 
@@ -965,7 +977,7 @@ CONTAINS
       REAL(kind=8) :: heat_index_extended(size(ta))
       REAL(kind=8) :: ta_f
       INTEGER i
-
+      !$OMP PARALLEL DO PRIVATE(ta_f)
       DO i = 1, size(ta)
          !convert °C to °F since HI is defined in Fahrenheit
          ta_f = ((9.0/5.0)*ta(i)) + 32
@@ -986,6 +998,7 @@ CONTAINS
          ! convert back to °C
          heat_index_extended(i) = (5.0/9.0)*(heat_index_extended(i) - 32.0)
       END DO
+      !$OMP END PARALLEL DO
    END FUNCTION heat_index_extended
 
    FUNCTION sat_vap_press_water(ta)
@@ -995,9 +1008,11 @@ CONTAINS
       REAL(kind=8) :: sat_vap_press_water(size(ta))
 
       INTEGER i
+      !$OMP PARALLEL DO
       DO i = 1, size(ta)
          sat_vap_press_water(i) = 6.112*EXP((17.62*ta(i))/(243.12 + ta(i)))
       END DO
+      !$OMP END PARALLEL DO
    END FUNCTION sat_vap_press_water
 
    FUNCTION sat_vap_press_ice(ta)
@@ -1007,9 +1022,11 @@ CONTAINS
       REAL(kind=8) :: sat_vap_press_ice(size(ta))
 
       INTEGER i
+      !$OMP PARALLEL DO
       DO i = 1, size(ta)
          sat_vap_press_ice(i) = 6.112*EXP((22.46*ta(i))/(272.62 + ta(i)))
       END DO
+      !$OMP END PARALLEL DO
    END FUNCTION sat_vap_press_ice
 
    FUNCTION dew_point(ta, rh)
@@ -1021,9 +1038,14 @@ CONTAINS
 
       ! TODO: it would be more efficient to calculate the saturation pressure
       ! inline to avoid throwing away parts of the results
+      !$OMP PARALLEL
+      !$OMP SECTIONS
+      !$OMP SECTION
       e_sat_water = sat_vap_press_water(ta)
+      !$OMP SECTION
       e_sat_ice = sat_vap_press_ice(ta)
-
+      !$OMP END SECTIONS
+      !$OMP DO
       DO i = 1, size(ta)
          IF (ta(i) >= 0.0) THEN
             dew_point(i) = (243.12*LOG((0.01*rh(i)*e_sat_water(i))/6.112))/ &
@@ -1033,6 +1055,8 @@ CONTAINS
                            (22.46 - LOG((0.01*rh(i)*e_sat_ice(i))/6.112))
          END IF
       END DO
+      !OMP END DO
+      !$OMP END PARALLEL
 
    END FUNCTION dew_point
 
@@ -1046,9 +1070,11 @@ CONTAINS
 
       e_sat_water = sat_vap_press_water(ta)
 
+      !$OMP PARALLEL DO
       DO i = 1, size(ta)
          absolute_humidity(i) = (2.1667*(rh(i)*e_sat_water(i)))/(ta(i) + 273.15)
       END DO
+      !$OMP END PARALLEL DO
 
    END FUNCTION absolute_humidity
 
@@ -1062,10 +1088,12 @@ CONTAINS
 
       e_sat_water = sat_vap_press_water(ta)
 
+      !$OMP PARALLEL DO
       DO i = 1, size(ta)
          specific_humidity(i) = 0.622*((0.01*rh(i)*e_sat_water(i))/ &
                                        (p(i) - 0.378*((0.01*rh(i)*e_sat_water(i)))))
       END DO
+      !$OMP END PARALLEL DO
       ! convert to g/kg
       specific_humidity = specific_humidity*1000.0
 
