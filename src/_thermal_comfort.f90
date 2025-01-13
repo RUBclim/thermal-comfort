@@ -91,6 +91,7 @@
 
 MODULE thermal_comfort_mod
    USE, INTRINSIC :: ieee_arithmetic
+   USE omp_lib
    IMPLICIT NONE
 
    PRIVATE
@@ -216,9 +217,10 @@ CONTAINS
       fcl = 1.15
       pos = 1
       sex = 1
-      ! calculate vapor pressure from rh
 
+      !$OMP PARALLEL DO PRIVATE(vpa)
       do i = 1, size(ta)
+         ! calculate vapor pressure from rh
          vpa = (rh(i)*es(Ta(i)))/100.0
          ! this never converges if a value is nan so  we need to check if any of the values are nan
          IF (ieee_is_nan(ta(i)) .OR. ieee_is_nan(rh(i)) .OR. ieee_is_nan(tmrt(i)) .OR. ieee_is_nan(v(i)) .OR. &
@@ -236,6 +238,7 @@ CONTAINS
          CALL pet_iteration(acl(i), adu(i), aeff(i), esw(i), facl(i), feff(i), p(i), rdcl(i), &
                             rdsk(i), rtv(i), ta(i), tcl(i), tsk(i), tx(i), vpts(i), wetsk(i))
       end do
+      !$OMP END PARALLEL DO
    END SUBROUTINE pet_static
 
 !------------------------------------------------------------------------------!
@@ -658,6 +661,7 @@ CONTAINS
       real(kind=8) :: result_array(size(Ta))
       integer i
 
+      !$OMP PARALLEL DO PRIVATE(d_tmrt, PA)
       DO i = 1, size(Ta)
          !~ type of input of the argument list
          ! DOUBLE PRECISION Ta,va,Tmrt,ehPa,Pa,D_Tmrt,rh;
@@ -879,6 +883,7 @@ CONTAINS
                            (2.47090539D-04)*D_Tmrt*Pa*Pa*Pa*Pa*Pa + &
                            (1.48348065D-03)*Pa*Pa*Pa*Pa*Pa*Pa
       END DO
+      !$OMP END PARALLEL DO
    END
 
    FUNCTION mrt(ta, tg, v, d, e)
@@ -889,6 +894,7 @@ CONTAINS
       INTEGER :: i
 
       ! calculate both versions of hgc and check which one is larger
+      !$OMP PARALLEL DO PRIVATE(hcg_natural, hcg_forced)
       DO i = 1, size(tg)
          hcg_natural = (1.4*(ABS(tg(i) - ta(i))/0.15)**0.25)
          hcg_forced = (6.3*((v(i)**0.6)/(d(i)**0.4)))
@@ -900,15 +906,18 @@ CONTAINS
             mrt(i) = ((((tg(i) + 273)**4) + (((1.1*(10**8))*v(i)**0.6)/(e(i)*(d(i)**0.4)))*(tg(i) - ta(i)))**0.25) - 273
          END IF
       END DO
+      !$OMP END PARALLEL DO
    END FUNCTION mrt
 
    FUNCTION twb(ta, rh)
       IMPLICIT NONE
       REAL(kind=8), INTENT(IN) :: ta(:), rh(:)
       REAL(kind=8) :: twb(size(ta))
+      !$OMP WORKSHARE
       twb = ta*atan(0.151977*(rh + 8.313659)**0.5) + &
             atan(ta + rh) - atan(rh - 1.676331) + 0.00391838* &
             (rh)**1.5*atan(0.023101*rh) - 4.686035
+      !$OMP END WORKSHARE
    END FUNCTION twb
 
    FUNCTION heat_index(ta, rh)
@@ -938,6 +947,7 @@ CONTAINS
       !  - 0.22475541*ta_f*rh - 6.83783D-3*ta_f**2 &
       !  - 5.481717D-2*rh**2 + 1.22874D-3*ta_f**2*rh &
       !  + 8.5282D-4*ta_f*rh**2 - 1.99D-6*ta_f**2*rh**2, &
+      !$OMP PARALLEL DO
       DO i = 1, size(ta)
          IF ((ta(i) < 26.666) .OR. (rh(i) < 40)) THEN
             heat_index(i) = ieee_value(ta(i), ieee_quiet_nan)
@@ -948,6 +958,7 @@ CONTAINS
                             c9*ta(i)**2*rh(i)**2
          END IF
       END DO
+      !$OMP END PARALLEL DO
 
    END FUNCTION heat_index
 
@@ -958,7 +969,7 @@ CONTAINS
       REAL(kind=8) :: heat_index_extended(size(ta))
       REAL(kind=8) :: ta_f
       INTEGER i
-
+      !$OMP PARALLEL DO PRIVATE(ta_f)
       DO i = 1, size(ta)
          !convert °C to °F since HI is defined in Fahrenheit
          ta_f = ((9.0/5.0)*ta(i)) + 32
@@ -979,6 +990,7 @@ CONTAINS
          ! convert back to °C
          heat_index_extended(i) = (5.0/9.0)*(heat_index_extended(i) - 32.0)
       END DO
+      !$OMP END PARALLEL DO
    END FUNCTION heat_index_extended
 
 END MODULE thermal_comfort_mod
