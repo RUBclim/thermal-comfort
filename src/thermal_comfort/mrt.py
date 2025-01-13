@@ -164,10 +164,10 @@ def mrt(
     This function performs better for larger arrays. For smaller arrays, the
     numpy-based function outperforms this function.
 
-    :param ta: air temperature
-    :param tg: black globe temperature
-    :param v: air velocity
-    :param d: diameter of the black globe (default 0.15 m)
+    :param ta: air temperature in °C
+    :param tg: black globe temperature in °C
+    :param v: air velocity in m/s
+    :param d: diameter of the black globe in m (default 0.15 m)
     :param e: emissivity of the black globe (default 0.95)
     """
     tg = np.array(tg)

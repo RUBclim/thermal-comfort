@@ -28,9 +28,9 @@ pip install git+ssh://git@github.com/RUBclim/thermal-comfort
 
 ## Quick start
 
-The termal-comfort package provides a limited set of commonly used functions.
+The thermal-comfort package provides a limited set of commonly used functions.
 Which work for scalar values, but are mainly optimized for large array calculation
-of hundres of thousands of values.
+of hundreds of thousands of values.
 
 ### scalars
 

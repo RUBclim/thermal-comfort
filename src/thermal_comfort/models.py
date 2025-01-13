@@ -298,7 +298,7 @@ def heat_index_extended(
         ta: Union[npt.NDArray[T], float],
         rh: Union[npt.NDArray[T], float],
 ) -> Union[npt.NDArray[T], float]:
-    """Calculate the heat index follwing Steadman R.G (1979) & Rothfusz L.P (1990),
+    """Calculate the heat index following Steadman R.G (1979) & Rothfusz L.P (1990),
     but extends the range following The National Weather Service Weather Predicion
     Center.
 
