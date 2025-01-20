@@ -264,3 +264,199 @@ def twb(
         return result.item()
     else:
         return result
+
+
+# autopep8: off
+@overload
+def sat_vap_press_water(ta: float) -> float: ...
+
+
+@overload
+def sat_vap_press_water(ta: npt.NDArray[T]) -> npt.NDArray[T]: ...
+# autopep8: on
+
+
+def sat_vap_press_water(
+        ta: Union[npt.NDArray[T], float],
+) -> Union[npt.NDArray[T], float]:
+    ta = np.array(ta)
+
+    # 1. check for correct shape
+    if not ta.ndim <= 1:
+        raise TypeError(
+            'Only arrays with one dimension are allowed. '
+            'Please reshape your array accordingly',
+        )
+
+    # 2. check for value ranges
+    if np.any((ta < -45) | (ta > 60)):
+        raise ValueError('The air temperature (ta) must be between -45 and 60 °C')
+
+    result = thermal_comfort_mod.sat_vap_press_water(ta=ta)
+    # check if we have a single value
+    if result.size == 1:
+        return result.item()
+    else:
+        return result
+
+
+# autopep8: off
+@overload
+def sat_vap_press_ice(ta: float) -> float: ...
+
+
+@overload
+def sat_vap_press_ice(ta: npt.NDArray[T]) -> npt.NDArray[T]: ...
+# autopep8: on
+
+
+def sat_vap_press_ice(ta: Union[npt.NDArray[T], float]) -> Union[npt.NDArray[T], float]:
+    ta = np.array(ta)
+
+    # 1. check for correct shape
+    if not ta.ndim <= 1:
+        raise TypeError(
+            'Only arrays with one dimension are allowed. '
+            'Please reshape your array accordingly',
+        )
+    # 2. check for value ranges
+    if np.any((ta < -65) | (ta > 0.01)):
+        raise ValueError('The air temperature (ta) must be between -65 and 0.01 °C')
+
+    result = thermal_comfort_mod.sat_vap_press_ice(ta=ta)
+    # check if we have a single value
+    if result.size == 1:
+        return result.item()
+    else:
+        return result
+
+
+# autopep8: off
+@overload
+def dew_point(
+        ta: float,
+        rh: float,
+) -> float: ...
+
+
+@overload
+def dew_point(
+        ta: npt.NDArray[T],
+        rh: npt.NDArray[T],
+) -> npt.NDArray[T]: ...
+# autopep8: on
+
+
+def dew_point(
+        ta: Union[npt.NDArray[T], float],
+        rh: Union[npt.NDArray[T], float],
+) -> Union[npt.NDArray[T], float]:
+    ta = np.array(ta)
+    rh = np.array(rh)
+
+    # 1. check for correct shape
+    if not (ta.ndim <= 1 and rh.ndim <= 1):
+        raise TypeError(
+            'Only arrays with one dimension are allowed. '
+            'Please reshape your array accordingly',
+        )
+    # 2. check for same length
+    if not (ta.size == rh.size):
+        raise ValueError('All arrays must have the same length')
+
+    result = thermal_comfort_mod.dew_point(ta=ta, rh=rh)
+    # check if we have a single value
+    if result.size == 1:
+        return result.item()
+    else:
+        return result
+
+
+# autopep8: off
+@overload
+def absolute_humidity(
+        ta: float,
+        rh: float,
+) -> float: ...
+
+
+@overload
+def absolute_humidity(
+        ta: npt.NDArray[T],
+        rh: npt.NDArray[T],
+) -> npt.NDArray[T]: ...
+# autopep8: on
+
+
+def absolute_humidity(
+        ta: Union[npt.NDArray[T], float],
+        rh: Union[npt.NDArray[T], float],
+) -> Union[npt.NDArray[T], float]:
+    ta = np.array(ta)
+    rh = np.array(rh)
+
+    # 1. check for correct shape
+    if not (ta.ndim <= 1 and rh.ndim <= 1):
+        raise TypeError(
+            'Only arrays with one dimension are allowed. '
+            'Please reshape your array accordingly',
+        )
+    # 2. check for same length
+    if not (ta.size == rh.size):
+        raise ValueError('All arrays must have the same length')
+
+    result = thermal_comfort_mod.absolute_humidity(ta=ta, rh=rh)
+    # check if we have a single value
+    if result.size == 1:
+        return result.item()
+    else:
+        return result
+
+
+# autopep8: off
+@overload
+def specific_humidity(
+        ta: float,
+        rh: float,
+        p: float = 1013.25,
+) -> float: ...
+
+
+@overload
+def specific_humidity(
+        ta: npt.NDArray[T],
+        rh: npt.NDArray[T],
+        p: Union[npt.NDArray[T], float] = 1013.25,
+) -> npt.NDArray[T]: ...
+# autopep8: on
+
+
+def specific_humidity(
+        ta: Union[npt.NDArray[T], float],
+        rh: Union[npt.NDArray[T], float],
+        p: Union[npt.NDArray[T], float] = 1013.25,
+) -> Union[npt.NDArray[T], float]:
+    ta = np.array(ta)
+    rh = np.array(rh)
+    # when we use the default, we need to reshape the arrays
+    if isinstance(p, float):
+        p = np.full_like(ta, p, dtype=float)
+    else:
+        p = np.array(p)
+
+    # 1. check for correct shape
+    if not (ta.ndim <= 1 and rh.ndim <= 1 and p.ndim <= 1):
+        raise TypeError(
+            'Only arrays with one dimension are allowed. '
+            'Please reshape your array accordingly',
+        )
+    # 2. check for same length
+    if not (ta.size == rh.size == p.size):
+        raise ValueError('All arrays must have the same length')
+
+    result = thermal_comfort_mod.specific_humidity(ta=ta, rh=rh, p=p)
+    # check if we have a single value
+    if result.size == 1:
+        return result.item()
+    else:
+        return result

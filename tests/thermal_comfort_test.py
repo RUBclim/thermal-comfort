@@ -5,11 +5,16 @@ import pandas as pd
 import pytest
 from numpy.testing import assert_array_almost_equal
 from pandas.testing import assert_series_equal
+from thermal_comfort import absolute_humidity
+from thermal_comfort import dew_point
 from thermal_comfort import heat_index
 from thermal_comfort import heat_index_extended
 from thermal_comfort import mrt
 from thermal_comfort import mrt_np
 from thermal_comfort import pet_static
+from thermal_comfort import sat_vap_press_ice
+from thermal_comfort import sat_vap_press_water
+from thermal_comfort import specific_humidity
 from thermal_comfort import twb
 from thermal_comfort import utci_approx
 
@@ -456,28 +461,6 @@ def test_twb_array_values():
     assert_array_almost_equal(twb(ta=ta, rh=rh), expected, decimal=1)
 
 
-@pytest.mark.parametrize('shape', ((2, 1), (2, 1, 1)))
-def test_twb_shapes_incorrect(shape):
-    ta = np.array([20, 25]).reshape(shape)
-    rh = np.array([50, 55]).reshape(shape)
-    with pytest.raises(TypeError) as excinfo:
-        twb(ta=ta, rh=rh)
-
-    assert excinfo.value.args[0] == (
-        'Only arrays with one dimension are allowed. '
-        'Please reshape your array accordingly'
-    )
-
-
-def test_twb_array_sizes_differ():
-    ta = np.array([20])
-    rh = np.array([50, 55])
-    with pytest.raises(ValueError) as excinfo:
-        twb(ta=ta, rh=rh)
-
-    assert excinfo.value.args[0] == 'All arrays must have the same length'
-
-
 def _c2f(celsius):
     """convert celsius to fahrenheit"""
     return celsius * 9 / 5 + 32
@@ -547,9 +530,15 @@ def test_heat_index_extented_scalar_values_in_extended_range(ta, rh, expected):
     assert heat_index_extended(ta=ta, rh=rh) == pytest.approx(expected, abs=1e-3)
 
 
-@pytest.mark.parametrize('f', (heat_index, heat_index_extended))
+@pytest.mark.parametrize(
+    'f',
+    (
+        heat_index, heat_index_extended, twb, dew_point, absolute_humidity,
+        specific_humidity,
+    ),
+)
 @pytest.mark.parametrize('shape', ((2, 1), (2, 1, 1)))
-def test_heat_index_shapes_incorrect(f, shape):
+def test_temp_rh_functions_shapes_incorrect(f, shape):
     ta = np.array([20, 25]).reshape(shape)
     rh = np.array([50, 55]).reshape(shape)
     with pytest.raises(TypeError) as excinfo:
@@ -561,11 +550,228 @@ def test_heat_index_shapes_incorrect(f, shape):
     )
 
 
-@pytest.mark.parametrize('f', (heat_index, heat_index_extended))
-def test_heat_index_array_sizes_differ(f):
+@pytest.mark.parametrize(
+    'f',
+    (
+        heat_index, heat_index_extended, twb, dew_point, absolute_humidity,
+        specific_humidity,
+    ),
+)
+def test_temp_rh_functions_sizes_differ(f):
     ta = np.array([20])
     rh = np.array([50, 55])
     with pytest.raises(ValueError) as excinfo:
         f(ta=ta, rh=rh)
 
     assert excinfo.value.args[0] == 'All arrays must have the same length'
+
+
+@pytest.mark.parametrize(
+    ('ta', 'expected'),
+    (
+        (-40, 0.189),
+        (-30, 0.51),
+        (-20, 1.26),
+        (-10, 2.87),
+        (0, 6.11),
+        (10, 12.26),
+        (20, 23.33),
+        (30, 42.34),
+        (40, 73.67),
+    ),
+)
+def test_sat_vap_press_over_water(ta, expected):
+    assert pytest.approx(sat_vap_press_water(ta), abs=1e-2) == expected
+
+
+def test_sat_vap_press_over_water_array_values():
+    ta = np.array([30, 20, 10])
+    expected = np.array([42.3, 23.3, 12.3])
+    assert_array_almost_equal(
+        sat_vap_press_water(ta=ta),
+        expected,
+        decimal=1,
+    )
+
+
+@pytest.mark.parametrize('ta', (-45.1, 60.1))
+def test_sat_vap_press_water_ta_outside_of_allowed_range(ta):
+    with pytest.raises(ValueError) as excinfo:
+        sat_vap_press_water(ta=ta)
+
+    assert excinfo.value.args[0] == (
+        'The air temperature (ta) must be between -45 and 60 °C'
+    )
+
+
+@pytest.mark.parametrize('f', (sat_vap_press_ice, sat_vap_press_water))
+@pytest.mark.parametrize('shape', ((2, 1), (2, 1, 1)))
+def test_sat_vap_press_shapes_incorrect(f, shape):
+    ta = np.array([20, 25]).reshape(shape)
+    with pytest.raises(TypeError) as excinfo:
+        f(ta=ta)
+
+    assert excinfo.value.args[0] == (
+        'Only arrays with one dimension are allowed. '
+        'Please reshape your array accordingly'
+    )
+
+
+@pytest.mark.parametrize(
+    ('ta', 'expected'),
+    (
+        (-30, 0.38),
+        (-20, 1.03),
+        (-10, 2.60),
+    ),
+)
+def test_sat_vap_press_over_ice(ta, expected):
+    assert pytest.approx(sat_vap_press_ice(ta), abs=1e-2) == expected
+
+
+def test_sat_vap_press_over_ice_array_values():
+    ta = np.array([-30, -20, -10])
+    expected = np.array([0.4, 1.0, 2.6])
+    assert_array_almost_equal(
+        sat_vap_press_ice(ta=ta),
+        expected,
+        decimal=1,
+    )
+
+
+@pytest.mark.parametrize('ta', (0.011, -65.1))
+def test_sat_vap_press_ice_ta_outside_of_allowed_range(ta):
+    with pytest.raises(ValueError) as excinfo:
+        sat_vap_press_ice(ta=ta)
+
+    assert excinfo.value.args[0] == (
+        'The air temperature (ta) must be between -65 and 0.01 °C'
+    )
+
+
+@pytest.mark.parametrize(
+    ('ta', 'rh', 'expected'),
+    (
+        (-10, 30, -22.89),
+        (-10, 50, -17.58),
+        (-10, 70, -13.95),
+        (-10, 100, -10.0),
+        (10, 30, -6.81),
+        (10, 50, 0.04),
+        (10, 70, 4.77),
+        (10, 100, 10.0),
+        (20, 30, 1.88),
+        (20, 50, 9.26),
+        (20, 70, 14.36),
+        (20, 100, 20.0),
+        (30, 30, 10.53),
+        (30, 50, 18.44),
+        (30, 70, 23.93),
+        (30, 100, 30),
+        (38, 30, 17.42),
+        (38, 50, 25.77),
+        (38, 70, 31.57),
+        (38, 100, 38),
+
+    ),
+)
+def test_dew_point(ta, rh, expected):
+    assert pytest.approx(dew_point(ta=ta, rh=rh), abs=1e-2) == expected
+
+
+def test_dew_point_array_values():
+    rh = np.array([30, 50, 70])
+    ta = np.array([10, 20, 30])
+    expected = np.array([-6.8, 9.3, 23.9])
+    assert_array_almost_equal(
+        dew_point(ta=ta, rh=rh),
+        expected,
+        decimal=1,
+    )
+
+
+@pytest.mark.parametrize(
+    ('ta', 'rh', 'expected'),
+    (
+        (-10, 30, 0.71),
+        (-10, 50, 1.18),
+        (-10, 70, 1.65),
+        (-10, 100, 2.36),
+        (10, 30, 2.81),
+        (10, 50, 4.69),
+        (10, 70, 6.57),
+        (10, 100, 9.38),
+        (20, 30, 5.17),
+        (20, 50, 8.62),
+        (20, 70, 12.07),
+        (20, 100, 17.24),
+        (30, 30, 9.08),
+        (30, 50, 15.13),
+        (30, 70, 21.18),
+        (30, 100, 30.26),
+        (40, 30, 15.29),
+        (40, 50, 25.49),
+        (40, 70, 35.69),
+        (40, 100, 50.98),
+    ),
+)
+def test_absolute_humidity(ta, rh, expected):
+    assert pytest.approx(absolute_humidity(ta=ta, rh=rh), abs=1e-2) == expected
+
+
+def test_absolute_humidity_array_values():
+    rh = np.array([30, 50, 70])
+    ta = np.array([10, 20, 30])
+    expected = np.array([2.8, 8.6, 21.2])
+    assert_array_almost_equal(
+        absolute_humidity(ta=ta, rh=rh),
+        expected,
+        decimal=1,
+    )
+
+
+@pytest.mark.parametrize(
+    ('ta', 'rh', 'p', 'expected'),
+    (
+        (-10, 30, 1013.15, 0.527),
+        (-10, 50, 1013.15, 0.879),
+        (-10, 70, 1013.15, 1.23),
+        (10, 30, 1013.15, 2.26),
+        (10, 50, 1013.15, 3.77),
+        (10, 70, 1013.15, 5.29),
+        (20, 30, 1013.15,  4.31),
+        (20, 50, 1013.15, 7.20),
+        (20, 70, 1013.15, 10.08),
+        (30, 30, 1013.15, 7.84),
+        (30, 50, 1013.15, 13.10),
+        (30, 70, 1013.15, 18.4),
+        (40, 30, 1013.15, 13.68),
+        (40, 50, 1013.15, 22.93),
+        (40, 70, 1013.15, 32.28),
+    ),
+)
+def test_specific_humidity(ta, rh, p, expected):
+    assert pytest.approx(specific_humidity(ta=ta, rh=rh, p=p), abs=1e-2) == expected
+
+
+def test_specific_humidity_array_values_default_p():
+    rh = np.array([30, 50, 70])
+    ta = np.array([10, 20, 30])
+    expected = np.array([2.3, 7.2, 18.4])
+    assert_array_almost_equal(
+        specific_humidity(ta=ta, rh=rh),
+        expected,
+        decimal=1,
+    )
+
+
+def test_specific_humidity_array_values_custom_p():
+    rh = np.array([30, 50, 70])
+    ta = np.array([10, 20, 30])
+    p = np.array([980.5, 1010.3, 1013.15])
+    expected = np.array([2.3, 7.2, 18.4])
+    assert_array_almost_equal(
+        specific_humidity(ta=ta, rh=rh, p=p),
+        expected,
+        decimal=1,
+    )

@@ -149,6 +149,11 @@ MODULE thermal_comfort_mod
    PUBLIC twb
    public heat_index
    PUBLIC heat_index_extended
+   PUBLIC sat_vap_press_water
+   PUBLIC sat_vap_press_ice
+   PUBLIC dew_point
+   PUBLIC absolute_humidity
+   PUBLIC specific_humidity
 
 CONTAINS
 
@@ -980,5 +985,88 @@ CONTAINS
          heat_index_extended(i) = (5.0/9.0)*(heat_index_extended(i) - 32.0)
       END DO
    END FUNCTION heat_index_extended
+
+   FUNCTION sat_vap_press_water(ta)
+      ! taken from VDI 3786 sheet 04
+      IMPLICIT NONE
+      REAL(kind=8), INTENT(IN) :: ta(:)
+      REAL(kind=8) :: sat_vap_press_water(size(ta))
+
+      INTEGER i
+      DO i = 1, size(ta)
+         sat_vap_press_water(i) = 6.112*EXP((17.62*ta(i))/(243.12 + ta(i)))
+      END DO
+   END FUNCTION sat_vap_press_water
+
+   FUNCTION sat_vap_press_ice(ta)
+      ! taken from VDI 3786 sheet 04
+      IMPLICIT NONE
+      REAL(kind=8), INTENT(IN) :: ta(:)
+      REAL(kind=8) :: sat_vap_press_ice(size(ta))
+
+      INTEGER i
+      DO i = 1, size(ta)
+         sat_vap_press_ice(i) = 6.112*EXP((22.46*ta(i))/(272.62 + ta(i)))
+      END DO
+   END FUNCTION sat_vap_press_ice
+
+   FUNCTION dew_point(ta, rh)
+      ! taken from VDI 3786 sheet 04
+      IMPLICIT NONE
+      REAL(kind=8), INTENT(IN) :: ta(:), rh(:)
+      REAL(kind=8) :: e_sat_water(size(ta)), e_sat_ice(size(ta)), dew_point(size(ta))
+      INTEGER i
+
+      ! TODO: it would be more efficient to calculate the saturation pressure
+      ! inline to avoid throwing away parts of the results
+      e_sat_water = sat_vap_press_water(ta)
+      e_sat_ice = sat_vap_press_ice(ta)
+
+      DO i = 1, size(ta)
+         IF (ta(i) >= 0.0) THEN
+            dew_point(i) = (243.12*LOG((0.01*rh(i)*e_sat_water(i))/6.112))/ &
+                           (17.62 - LOG((0.01*rh(i)*e_sat_water(i))/6.112))
+         ELSE
+            dew_point(i) = (272.62*LOG((0.01*rh(i)*e_sat_ice(i))/6.112))/ &
+                           (22.46 - LOG((0.01*rh(i)*e_sat_ice(i))/6.112))
+         END IF
+      END DO
+
+   END FUNCTION dew_point
+
+   FUNCTION absolute_humidity(ta, rh)
+      ! taken from VDI 3786 sheet 04
+      ! only above water
+      IMPLICIT NONE
+      REAL(kind=8), INTENT(IN) :: ta(:), rh(:)
+      REAL(kind=8) :: e_sat_water(size(ta)), absolute_humidity(size(ta))
+      INTEGER i
+
+      e_sat_water = sat_vap_press_water(ta)
+
+      DO i = 1, size(ta)
+         absolute_humidity(i) = (2.1667*(rh(i)*e_sat_water(i)))/(ta(i) + 273.15)
+      END DO
+
+   END FUNCTION absolute_humidity
+
+   FUNCTION specific_humidity(ta, rh, p)
+      ! taken from VDI 3786 sheet 04
+      ! only above water
+      IMPLICIT NONE
+      REAL(kind=8), INTENT(IN) :: ta(:), rh(:), p(:)
+      REAL(kind=8) :: e_sat_water(size(ta)), e_sat_ice(size(ta)), specific_humidity(size(ta))
+      INTEGER i
+
+      e_sat_water = sat_vap_press_water(ta)
+
+      DO i = 1, size(ta)
+         specific_humidity(i) = 0.622*((0.01*rh(i)*e_sat_water(i))/ &
+                                       (p(i) - 0.378*((0.01*rh(i)*e_sat_water(i)))))
+      END DO
+      ! convert to g/kg
+      specific_humidity = specific_humidity*1000.0
+
+   END FUNCTION specific_humidity
 
 END MODULE thermal_comfort_mod

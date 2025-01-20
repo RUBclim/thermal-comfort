@@ -3,8 +3,13 @@ from thermal_comfort.models import heat_index
 from thermal_comfort.models import heat_index_extended
 from thermal_comfort.models import pet_static
 from thermal_comfort.models import utci_approx
+from thermal_comfort.mrt import absolute_humidity
+from thermal_comfort.mrt import dew_point
 from thermal_comfort.mrt import mrt
 from thermal_comfort.mrt import mrt_np
+from thermal_comfort.mrt import sat_vap_press_ice
+from thermal_comfort.mrt import sat_vap_press_water
+from thermal_comfort.mrt import specific_humidity
 from thermal_comfort.mrt import twb
 
 
@@ -16,9 +21,17 @@ _mrt = thermal_comfort_mod.mrt
 _twb = thermal_comfort_mod.twb
 _heat_index = thermal_comfort_mod.heat_index
 _heat_index_extended = thermal_comfort_mod.heat_index_extended
+_sat_vap_press_water = thermal_comfort_mod.sat_vap_press_water
+_sat_vap_press_ice = thermal_comfort_mod.sat_vap_press_ice
+_dew_point = thermal_comfort_mod.dew_point
+_absolute_humidity = thermal_comfort_mod.absolute_humidity
+_specific_humidity = thermal_comfort_mod.specific_humidity
 
 __all__ = [
     'utci_approx', '_utci_approx', 'pet_static',
     '_pet_static', 'mrt_np', 'mrt', '_mrt', 'twb', '_twb',
     'heat_index', '_heat_index', 'heat_index_extended', '_heat_index_extended',
+    'sat_vap_press_water', '_sat_vap_press_water', 'sat_vap_press_ice',
+    '_sat_vap_press_ice', 'dew_point', '_dew_point', 'absolute_humidity',
+    '_absolute_humidity', 'specific_humidity', '_specific_humidity',
 ]

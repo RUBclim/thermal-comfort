@@ -125,3 +125,31 @@ def heat_index_extended(
         rh: npt.NDArray[T] | float,
 ) -> npt.NDArray[T]:
     ...
+
+
+def sat_vap_press_water(ta: npt.NDArray[T] | float) -> npt.NDArray[T]: ...
+
+
+def sat_vap_press_ice(ta: npt.NDArray[T] | float) -> npt.NDArray[T]: ...
+
+
+def dew_point(
+        ta: npt.NDArray[T] | float,
+        rh: npt.NDArray[T] | float,
+) -> npt.NDArray[T]:
+    ...
+
+
+def absolute_humidity(
+        ta: npt.NDArray[T] | float,
+        rh: npt.NDArray[T] | float,
+) -> npt.NDArray[T]:
+    ...
+
+
+def specific_humidity(
+        ta: npt.NDArray[T] | float,
+        rh: npt.NDArray[T] | float,
+        p: npt.NDArray[T] | float,
+) -> npt.NDArray[T]:
+    ...
