@@ -18,8 +18,7 @@ via ssh
 pip install git+ssh://git@github.com/RUBclim/thermal-comfort
 ```
 
-> [!NOTE]
-> For this to work, you will have to have `git` and `gfortran` installed
+> [!NOTE] For this to work, you will have to have `git` and `gfortran` installed
 
 For every release, pre-compiled ABI-3 wheels are provided under
 [releases](https://github.com/RUBclim/thermal-comfort/releases)
@@ -187,6 +186,8 @@ The hardware used is:
 
 using an array of length 100,000 the following results were found:
 
+### comparing to pythermalcomfort
+
 | Benchmark         | pythermalcomfort ([bf9febd][1]) |     thermal-comfort      | thermal-comfort (unsafe) | thermal-comfort (Open MPI) | thermal-comfort (unsafe & Open MPI) |
 | ----------------- | :-----------------------------: | :----------------------: | :----------------------: | :------------------------: | :---------------------------------: |
 | tmrt scalar       |             21.0 us             |  20.3 us: 1.03x faster   |  2.21 us: 9.50x faster   |   23.3 us: 1.11x slower    |        4.38 us: 4.79x faster        |
@@ -201,8 +202,17 @@ using an array of length 100,000 the following results were found:
 | pet array         |             189 sec             |  284 ms: 665.14x faster  |  804 ms: 234.82x faster  |  117 ms: 1611.19x faster   |       113 ms: 1669.13x faster       |
 | Geometric mean    |              (ref)              |      10.00x faster       |      13.83x faster       |       10.45x faster        |            23.64x faster            |
 
-> [!CAUTION]
-> If you're after the last bit of performance and don't care about input
+### comparing to umep
+
+| Benchmark      |   umep   | pythermalcomfort ([bf9febd][1]) |     thermal-comfort      | thermal-comfort (unsafe) | thermal-comfort (Open MPI) | thermal-comfort (unsafe & Open MPI) |
+| -------------- | :------: | :-----------------------------: | :----------------------: | :----------------------: | :------------------------: | :---------------------------------: |
+| utci scalar    | 44.5 us  |      59.5 us: 1.34x slower      |  22.7 us: 1.96x faster   |  2.23 us: 19.97x faster  |   26.0 us: 1.72x faster    |       4.45 us: 10.00x faster        |
+| utci array     | 6.87 sec |     37.1 ms: 185.23x faster     | 5.93 ms: 1157.28x faster | 11.4 ms: 602.16x faster  |  3.82 ms: 1798.79x faster  |      1.24 ms: 5526.68x faster       |
+| pet scalar     |  388 us  |     6.04 ms: 15.56x slower      |  5.86 us: 66.29x faster  |  6.73 us: 57.69x faster  |   8.68 us: 44.74x faster   |       6.56 us: 59.26x faster        |
+| pet array      | 62.6 sec |      189 sec: 3.02x slower      |  284 ms: 220.43x faster  |  804 ms: 77.82x faster   |   117 ms: 533.95x faster   |       113 ms: 553.15x faster        |
+| Geometric mean |  (ref)   |          2.07x faster           |      53.17x faster       |      88.52x faster       |       51.68x faster        |           148.51x faster            |
+
+> [!CAUTION] If you're after the last bit of performance and don't care about input
 > validation, you may use the underscored functions e.g. `_utci_approx` or `_pet_static`
 > which fully avoid any computations in python. However, you will have to guarantee that
 > all your arrays have the same length otherwise undefined behavior may happen. For
