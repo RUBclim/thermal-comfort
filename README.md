@@ -18,7 +18,8 @@ via ssh
 pip install git+ssh://git@github.com/RUBclim/thermal-comfort
 ```
 
-> [!NOTE] For this to work, you will have to have `git` and `gfortran` installed
+> [!NOTE]
+> For this to work, you will have to have `git` and `gfortran` installed
 
 For every release, pre-compiled ABI-3 wheels are provided under
 [releases](https://github.com/RUBclim/thermal-comfort/releases)
@@ -212,7 +213,8 @@ using an array of length 100,000 the following results were found:
 | pet array      | 62.6 sec |      189 sec: 3.02x slower      |  284 ms: 220.43x faster  |  804 ms: 77.82x faster   |   117 ms: 533.95x faster   |       113 ms: 553.15x faster        |
 | Geometric mean |  (ref)   |          2.07x faster           |      53.17x faster       |      88.52x faster       |       51.68x faster        |           148.51x faster            |
 
-> [!CAUTION] If you're after the last bit of performance and don't care about input
+> [!CAUTION]
+> If you're after the last bit of performance and don't care about input
 > validation, you may use the underscored functions e.g. `_utci_approx` or `_pet_static`
 > which fully avoid any computations in python. However, you will have to guarantee that
 > all your arrays have the same length otherwise undefined behavior may happen. For
