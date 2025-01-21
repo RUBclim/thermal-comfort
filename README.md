@@ -108,7 +108,7 @@ For a complete documentation look at the
 Calculate the mean radiant temperature based on DIN EN ISO 7726.
 
 ```python
-mrt(ta, tg, v, d = 0.15, e = 0.95)
+mean_radiant_temp(ta, tg, v, d = 0.15, e = 0.95)
 ```
 
 - `ta`: air temperature in °C
@@ -132,7 +132,7 @@ utci_approx(ta, tmrt, v, rh)
 Calculate the Physiological Equivalent Temperature (PET).
 
 ```python
-pet_static( ta, tmrt, v, rh, p)
+pet_static(ta, tmrt, v, rh, p)
 ```
 
 - `ta`: air temperature in °C
@@ -169,7 +169,52 @@ heat_index_extended(ta, rh)
 Calculate the wet bulb temperature following the Stull (2011) equation
 
 ```python
-twb(ta, rh)
+wet_bulb_temp(ta, rh)
+```
+
+- `ta`: air temperature in °C
+- `rh`: relative humidity in %
+
+#### Saturation Vapor Pressure
+
+##### Over water
+
+```python
+sat_vap_press_water(ta)
+```
+
+- `ta`: air temperature in °C
+
+##### Over ice
+
+```python
+sat_vap_press_ice(ta)
+```
+
+- `ta`: air temperature in °C
+
+#### Dew Point Temperature
+
+```python
+dew_point(ta, rh)
+```
+
+- `ta`: air temperature in °C
+- `rh`: relative humidity in %
+
+#### Absolute Humidity
+
+```python
+absolute_humidity(ta, rh)
+```
+
+- `ta`: air temperature in °C
+- `rh`: relative humidity in %
+
+#### Specific Humidity
+
+```python
+specific_humidity(ta, rh)
 ```
 
 - `ta`: air temperature in °C
