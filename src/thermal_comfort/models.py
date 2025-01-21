@@ -37,23 +37,25 @@ def utci_approx(
         v: Union[npt.NDArray[T], float],
         rh: Union[npt.NDArray[T], float],
 ) -> Union[npt.NDArray[T], float]:
-    """Calculate the Universal Thermal Climate Index (UTCI)
+    """Calculate the Universal Thermal Climate Index (UTCI).
 
     The UTCI is implemented as described in VDI 3787 Part 2. The fortran code was
     vendored from here: https://utci.org/resources/UTCI%20Program%20Code.zip.
     A few changes were implemented to the original fortran-code.
 
     - Instead of taking the vapor pressure as an argument, it now takes the
-      relative humidtiy. The vapor pressure is calculated from the relative humidtiy
-      using the formular by Wexler (1976) which is described by Hardy (1998).
+      relative humidity. The vapor pressure is calculated from the relative humidity
+      using the formula by Wexler (1976) which is described by Hardy (1998).
     - Arguments were renamed for a consistent interface within this package.
+
 
     This functions is optimized on 1D-array operations, however also scalars may
     be provided.
 
-    :param ta: Air temperature in °C
-    :param tmrt: Mean radiant temperature in °C
-    :param v: Wind speed in m/s
+    :param ta: Air temperature in °C in the range between -50 and 50 °C
+    :param tmrt: Mean radiant temperature in °C in the range between -30 °C below
+        and 70 °C above ta
+    :param v: Wind speed in m/s in the range between 0.5 and 17 m/s
     :param rh: Relative humidity in %
 
     :returns: Universal Thermal Climate Index (UTCI) in °C
@@ -234,11 +236,11 @@ def heat_index(
         ta: Union[npt.NDArray[T], float],
         rh: Union[npt.NDArray[T], float],
 ) -> Union[npt.NDArray[T], float]:
-    """Calculate the heat index follwing Steadman R.G (1979) & Rothfusz L.P (1990).
+    r"""Calculate the heat index follwing Steadman R.G (1979) & Rothfusz L.P (1990).
 
-    This calculates the heat index in the range of >= 80 °F (26.666 °C) and >= 40 %
-    relative humidity. If values outside of this range are provided, they are
-    returned as ``NaN``. This version natievely works with °C as shown by
+    This calculates the heat index in the range of :math:`\ge` 80 °F (26.666 °C) and
+    :math:`\ge` 40 % relative humidity. If values outside of this range are provided,
+    they are returned as ``NaN``. This version natively works with °C as shown by
     Blazejczyk et al. 2011.
 
     This functions is optimized on 1D-array operations, however also scalars may
@@ -246,6 +248,8 @@ def heat_index(
 
     :param ta: Air temperature in °C
     :param rh: Relative Humidity in %
+
+    :returns: Heat Index in °C
 
     **References**
 
@@ -299,16 +303,19 @@ def heat_index_extended(
         rh: Union[npt.NDArray[T], float],
 ) -> Union[npt.NDArray[T], float]:
     """Calculate the heat index following Steadman R.G (1979) & Rothfusz L.P (1990),
-    but extends the range following The National Weather Service Weather Predicion
+    but extends the range following The National Weather Service Weather Prediction
     Center.
 
-    This version uses °F under the hood, since corrections are provided in °F only.
+    This function works for the entire range of air temperatures and relative humidity.
+    It uses °F under the hood, since corrections are provided in °F only.
 
     This functions is optimized on 1D-array operations, however also scalars may
     be provided.
 
     :param ta: Air temperature in °C
     :param rh: Relative Humidity in %
+
+    :returns: Heat Index in °C
 
     **References**
 

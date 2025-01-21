@@ -18,15 +18,16 @@ def _tmrt_forced_convection(
         d: Union[npt.NDArray[T], float],
         e: Union[npt.NDArray[T], float],
 ) -> Union[npt.NDArray[T], np.floating]:
-    """
-    Calculate the mean radiant temperature based on DIN EN ISO 7726 for forced
+    """Calculate the mean radiant temperature based on DIN EN ISO 7726 for forced
     convection.
 
-    ta = air temperature
-    tg = black globe temperature
-    v = air velocity
-    d = diameter of the black globe
-    e = emissivity of the black globe
+    :param ta: air temperature in °C
+    :param tg: black globe temperature in °C
+    :param v: air velocity in m/s
+    :param d: diameter of the black globe in m
+    :param e: emissivity of the black globe
+
+    :returns: returns the mean radiant temperature for forced convection in °C
     """
     return (
         np.power(
@@ -47,14 +48,15 @@ def _tmrt_natural_convection(
         d: Union[npt.NDArray[T], float],
         e: Union[npt.NDArray[T], float],
 ) -> Union[npt.NDArray[T], np.floating]:
-    """
-    Calculate the mean radiant temperature based on DIN EN ISO 7726 for natural
+    """Calculate the mean radiant temperature based on DIN EN ISO 7726 for natural
     convection.
 
-    ta = air temperature
-    tg = black globe temperature
-    d = diameter of the black globe
-    e = emissivity of the black globe
+    :param ta: air temperature in °C
+    :param tg: black globe temperature in °C
+    :param d: diameter of the black globe in m
+    :param e: emissivity of the black globe
+
+    :returns: returns the mean radiant temperature for natural convection in °C
     """
     return (
         np.power(
@@ -72,8 +74,7 @@ def mean_radiant_temp_np(
         d: Union[npt.NDArray[T], float] = 0.15,
         e: Union[npt.NDArray[T], float] = 0.95,
 ) -> Union[npt.NDArray[T], np.floating]:
-    """
-    Calculate the mean radiant temperature based on DIN EN ISO 7726.
+    """Calculate the mean radiant temperature based on DIN EN ISO 7726.
 
     Based on the air velocity, this function will decide whether to use the
     natural or forced convection.
@@ -89,6 +90,8 @@ def mean_radiant_temp_np(
     :param v: air velocity in m/s
     :param d: diameter of the black globe in m (default 0.15 m)
     :param e: emissivity of the black globe (default 0.95)
+
+    :returns: returns the mean radiant temperature in °C
     """
     tg = np.asarray(tg)
     v = np.asarray(v)
@@ -169,6 +172,8 @@ def mean_radiant_temp(
     :param v: air velocity in m/s
     :param d: diameter of the black globe in m (default 0.15 m)
     :param e: emissivity of the black globe (default 0.95)
+
+    :returns: returns the mean radiant temperature in °C
     """
     tg = np.array(tg)
     v = np.array(v)
@@ -236,6 +241,8 @@ def wet_bulb_temp(
     :param ta: air temperature in °C
     :param rh: relative humidity in %
 
+    :returns: returns the wet bulb temperature in °C
+
     **References**
 
     - Stull, R., 2011. Wet-Bulb Temperature from Relative Humidity and
@@ -276,6 +283,22 @@ def sat_vap_press_water(ta: npt.NDArray[T]) -> npt.NDArray[T]: ...
 def sat_vap_press_water(
         ta: Union[npt.NDArray[T], float],
 ) -> Union[npt.NDArray[T], float]:
+    """Calculate the saturation vapor pressure **over water** following the
+    equation in VDI 3786 sheet 04.
+
+    This functions is optimized on 1D-array operations, however also scalars may
+    be provided.
+
+    :param ta: air temperature in °C
+
+    :returns: returns the saturation vapor pressure in hPa
+
+    **References**
+
+    - Sonntag, D. (1990). Important new values of the physical con- stants of 1986,
+      vapour pressure formulations based on the ITC-90, and psychrometer formulae.
+      Z. Meteorol., 40, 340–344.
+    """
     ta = np.array(ta)
 
     # 1. check for correct shape
@@ -308,6 +331,23 @@ def sat_vap_press_ice(ta: npt.NDArray[T]) -> npt.NDArray[T]: ...
 
 
 def sat_vap_press_ice(ta: Union[npt.NDArray[T], float]) -> Union[npt.NDArray[T], float]:
+    """Calculate the saturation vapor pressure **over ice** following the
+    equation in VDI 3786 sheet 04.
+
+    This functions is optimized on 1D-array operations, however also scalars may
+    be provided.
+
+    :param ta: air temperature in °C
+
+    :returns: returns the saturation vapor pressure in hPa
+
+    **References**
+
+    - Sonntag, D. (1990). Important new values of the physical con- stants of 1986,
+      vapour pressure formulations based on the ITC-90, and psychrometer formulae.
+      Z. Meteorol., 40, 340–344.
+    """
+
     ta = np.array(ta)
 
     # 1. check for correct shape
@@ -348,6 +388,28 @@ def dew_point(
         ta: Union[npt.NDArray[T], float],
         rh: Union[npt.NDArray[T], float],
 ) -> Union[npt.NDArray[T], float]:
+    """Calculate the dew point following the equation in VDI 3786 sheet 04.
+
+    For temperatures values grate or equal to 0 °C, the dew point is calculated
+    using the saturation vapor pressure over water. For temperatures below 0 °C,
+    the dew point is calculated using the saturation vapor pressure over ice.
+
+    This functions is optimized on 1D-array operations, however also scalars may
+    be provided.
+
+    :param ta: air temperature in °C
+    :param rh: relative humidity in %
+
+    :returns: returns the dew point temperature in °C
+
+    **References**
+
+    - Sonntag, D. (1990). Important new values of the physical con- stants of 1986,
+      vapour pressure formulations based on the ITC-90, and psychrometer formulae.
+      Z. Meteorol., 40, 340–344.
+    - Sonntag, D. (1994). Advancements in the field of hygrometry.
+      Meteorologische Zeitschrift, 51–66. https://doi.org/10.1127/metz/3/1994/51
+    """
     ta = np.array(ta)
     rh = np.array(rh)
 
@@ -389,6 +451,17 @@ def absolute_humidity(
         ta: Union[npt.NDArray[T], float],
         rh: Union[npt.NDArray[T], float],
 ) -> Union[npt.NDArray[T], float]:
+    """Calculate the absolute humidity above water following the equation in
+    VDI 3786 sheet 04.
+
+    This functions is optimized on 1D-array operations, however also scalars may
+    be provided.
+
+    :param ta: air temperature in °C
+    :param rh: relative humidity in %
+
+    :returns: returns the absolute humidity in g/m³
+    """
     ta = np.array(ta)
     rh = np.array(rh)
 
@@ -433,6 +506,18 @@ def specific_humidity(
         rh: Union[npt.NDArray[T], float],
         p: Union[npt.NDArray[T], float] = 1013.25,
 ) -> Union[npt.NDArray[T], float]:
+    """Calculate the specific humidity above water following the equation in
+    VDI 3786 sheet 04.
+
+    This functions is optimized on 1D-array operations, however also scalars may
+    be provided.
+
+    :param ta: air temperature in °C
+    :param rh: relative humidity in %
+    :param p: air pressure in hPa (default 1013.25 hPa)
+
+    :returns: returns the absolute humidity in g/kg
+    """
     ta = np.array(ta)
     rh = np.array(rh)
     # when we use the default, we need to reshape the arrays

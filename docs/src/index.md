@@ -6,11 +6,13 @@ maxdepth: 1
 ```
 
 The `thermal-comfort` package wraps a few common thermal-comfort functions from official
-sources such as ISO-norms or VDI-Guidelines in python. The underlying functions are implemented in
-fortran to achieve blazingly fast performance on large arrays. If possible, the original code was
-reused and slightly modified to create a standardized interface for all function.
+sources such as ISO-norms or VDI-Guidelines in python. The underlying functions are
+implemented in fortran to achieve blazingly fast performance on large arrays. If
+possible, the original code was reused and slightly modified to create a standardized
+interface for all function.
 
-Tests are implemented for all functions using offical data often provided alongside a paper or the implementation itself.
+Tests are implemented for all functions using offical data often provided alongside a
+paper or the implementation itself.
 
 ## Installation
 
@@ -28,9 +30,9 @@ pip install git+ssh://git@github.com/RUBclim/thermal-comfort
 
 ## Quick start
 
-The thermal-comfort package provides a limited set of commonly used functions.
-Which work for scalar values, but are mainly optimized for large array calculation
-of hundreds of thousands of values.
+The thermal-comfort package provides a limited set of commonly used functions. Which
+work for scalar values, but are mainly optimized for large array calculation of hundreds
+of thousands of values.
 
 ### scalars
 
@@ -60,7 +62,8 @@ utci_approx(
 
 #### n-dimensional arrays
 
-The functions only accept 1-dimensional arrays, multi dimensional arrays must be reshaped before and after.
+The functions only accept 1-dimensional arrays, multi dimensional arrays must be
+reshaped before and after.
 
 ```python
 import numpy as np
@@ -89,11 +92,33 @@ utci = utci.reshape(orig_shape)
 
 ## API documentation
 
+### Thermal comfort indices
+
 ```{eval-rst}
-.. automodule:: thermal_comfort
-   :members:
-   :undoc-members:
-   :private-members:
+.. autofunction:: thermal_comfort.utci_approx
+.. autofunction:: thermal_comfort.pet_static
+.. autofunction:: thermal_comfort.heat_index
+.. autofunction:: thermal_comfort.heat_index_extended
+
+```
+
+### Temperature
+
+```{eval-rst}
+.. autofunction:: thermal_comfort.mean_radiant_temp
+.. autofunction:: thermal_comfort.mean_radiant_temp_np
+.. autofunction:: thermal_comfort.wet_bulb_temp
+.. autofunction:: thermal_comfort.dew_point
+.. autofunction:: thermal_comfort.sat_vap_press_water
+.. autofunction:: thermal_comfort.sat_vap_press_ice
+
+```
+
+### Humidity
+
+```{eval-rst}
+.. autofunction:: thermal_comfort.absolute_humidity
+.. autofunction:: thermal_comfort.specific_humidity
 ```
 
 ## Indices and tables
