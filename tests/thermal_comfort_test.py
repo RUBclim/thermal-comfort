@@ -9,14 +9,14 @@ from thermal_comfort import absolute_humidity
 from thermal_comfort import dew_point
 from thermal_comfort import heat_index
 from thermal_comfort import heat_index_extended
-from thermal_comfort import mrt
-from thermal_comfort import mrt_np
+from thermal_comfort import mean_radiant_temp
+from thermal_comfort import mean_radiant_temp_np
 from thermal_comfort import pet_static
 from thermal_comfort import sat_vap_press_ice
 from thermal_comfort import sat_vap_press_water
 from thermal_comfort import specific_humidity
-from thermal_comfort import twb
 from thermal_comfort import utci_approx
+from thermal_comfort import wet_bulb_temp
 
 
 def load_utci_test_data():
@@ -361,7 +361,7 @@ def test_pet_static_array_sizes_differ():
     assert excinfo.value.args[0] == 'All arrays must have the same length'
 
 
-@pytest.mark.parametrize('f', [mrt, mrt_np])
+@pytest.mark.parametrize('f', [mean_radiant_temp, mean_radiant_temp_np])
 @pytest.mark.parametrize(
     ('ta', 'tg', 'v', 'd', 'expected'),
     (
@@ -377,7 +377,7 @@ def test_tmrt_scalar_values(ta, tg, v, d, expected, f):
     assert pytest.approx(f(ta=ta, tg=tg, v=v, d=d, e=0.95), abs=1e-1) == expected
 
 
-@pytest.mark.parametrize('f', [mrt, mrt_np])
+@pytest.mark.parametrize('f', [mean_radiant_temp, mean_radiant_temp_np])
 def test_tmrt_array_values_default_d_e(f):
     tg = np.array([55, 53.2, 55])
     v = np.array([0.3, 0.3, 0.1])
@@ -386,7 +386,7 @@ def test_tmrt_array_values_default_d_e(f):
     assert pytest.approx(f(ta=ta, tg=tg, v=v), abs=1e-1) == expected
 
 
-@pytest.mark.parametrize('f', [mrt, mrt_np])
+@pytest.mark.parametrize('f', [mean_radiant_temp, mean_radiant_temp_np])
 def test_tmrt_array_values(f):
     tg = np.array([55, 53.2, 55])
     v = np.array([0.3, 0.3, 0.1])
@@ -401,7 +401,7 @@ def test_tmrt_array_values(f):
     )
 
 
-@pytest.mark.parametrize('f', [mrt, mrt_np])
+@pytest.mark.parametrize('f', [mean_radiant_temp, mean_radiant_temp_np])
 @pytest.mark.parametrize('d', (0, -0.01, -100.5))
 def test_mrt_d_outside_of_allowed_range(f, d):
     with pytest.raises(ValueError) as excinfo:
@@ -410,7 +410,7 @@ def test_mrt_d_outside_of_allowed_range(f, d):
     assert excinfo.value.args[0] == 'The globe diameter (d) must be positive'
 
 
-@pytest.mark.parametrize('f', [mrt, mrt_np])
+@pytest.mark.parametrize('f', [mean_radiant_temp, mean_radiant_temp_np])
 @pytest.mark.parametrize('e', (-0.01, 1.1))
 def test_mrt_e_outside_of_allowed_range(f, e):
     with pytest.raises(ValueError) as excinfo:
@@ -425,7 +425,7 @@ def test_mrt_shapes_incorrect(shape):
     ta = np.array([20.5, 30.5]).reshape(shape)
     v = np.array([1.5, 2.5]).reshape(shape)
     with pytest.raises(TypeError) as excinfo:
-        mrt(tg=tg, v=v, ta=ta)
+        mean_radiant_temp(tg=tg, v=v, ta=ta)
 
     assert excinfo.value.args[0] == (
         'Only arrays with one dimension are allowed. '
@@ -438,7 +438,7 @@ def test_mrt_array_sizes_differ():
     ta = np.array([20.5, 30.5])
     v = np.array([1.5, 2.5])
     with pytest.raises(ValueError) as excinfo:
-        mrt(tg=tg, v=v, ta=ta)
+        mean_radiant_temp(tg=tg, v=v, ta=ta)
 
     assert excinfo.value.args[0] == 'All arrays must have the same length'
 
@@ -451,14 +451,14 @@ def test_mrt_array_sizes_differ():
     ),
 )
 def test_twb_scalar_values(ta, rh, expected):
-    assert pytest.approx(twb(ta=ta, rh=rh), abs=1e-1) == expected
+    assert pytest.approx(wet_bulb_temp(ta=ta, rh=rh), abs=1e-1) == expected
 
 
 def test_twb_array_values():
     ta = np.array([20, 25])
     rh = np.array([50, 55])
     expected = np.array([13.7, 18.8])
-    assert_array_almost_equal(twb(ta=ta, rh=rh), expected, decimal=1)
+    assert_array_almost_equal(wet_bulb_temp(ta=ta, rh=rh), expected, decimal=1)
 
 
 def _c2f(celsius):
@@ -533,7 +533,7 @@ def test_heat_index_extented_scalar_values_in_extended_range(ta, rh, expected):
 @pytest.mark.parametrize(
     'f',
     (
-        heat_index, heat_index_extended, twb, dew_point, absolute_humidity,
+        heat_index, heat_index_extended, wet_bulb_temp, dew_point, absolute_humidity,
         specific_humidity,
     ),
 )
@@ -553,7 +553,7 @@ def test_temp_rh_functions_shapes_incorrect(f, shape):
 @pytest.mark.parametrize(
     'f',
     (
-        heat_index, heat_index_extended, twb, dew_point, absolute_humidity,
+        heat_index, heat_index_extended, wet_bulb_temp, dew_point, absolute_humidity,
         specific_humidity,
     ),
 )

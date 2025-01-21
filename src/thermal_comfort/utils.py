@@ -65,7 +65,7 @@ def _tmrt_natural_convection(
     ) - 273
 
 
-def mrt_np(
+def mean_radiant_temp_np(
         ta: Union[npt.NDArray[T], float],
         tg: Union[npt.NDArray[T], float],
         v: Union[npt.NDArray[T], float],
@@ -125,7 +125,7 @@ def mrt_np(
 
 # autopep8: off
 @overload
-def mrt(
+def mean_radiant_temp(
         ta: float,
         tg: float,
         v: float,
@@ -135,7 +135,7 @@ def mrt(
 
 
 @overload
-def mrt(
+def mean_radiant_temp(
         ta: npt.NDArray[T],
         tg: npt.NDArray[T],
         v: npt.NDArray[T],
@@ -145,7 +145,7 @@ def mrt(
 # autopep8: on
 
 
-def mrt(
+def mean_radiant_temp(
         ta: Union[npt.NDArray[T], float],
         tg: Union[npt.NDArray[T], float],
         v: Union[npt.NDArray[T], float],
@@ -203,7 +203,7 @@ def mrt(
     if np.any((e < 0) | (e > 1)):
         raise ValueError('The emissivity (e) must be between 0 and 1')
 
-    result = thermal_comfort_mod.mrt(tg=tg, v=v, ta=ta, d=d, e=e)
+    result = thermal_comfort_mod.mean_radiant_temp(tg=tg, v=v, ta=ta, d=d, e=e)
     # check if we have a single value
     if result.size == 1:
         return result.item()
@@ -213,21 +213,21 @@ def mrt(
 
 # autopep8: off
 @overload
-def twb(
+def wet_bulb_temp(
         ta: float,
         rh: float,
 ) -> float: ...
 
 
 @overload
-def twb(
+def wet_bulb_temp(
         ta: npt.NDArray[T],
         rh: npt.NDArray[T],
 ) -> npt.NDArray[T]: ...
 # autopep8: on
 
 
-def twb(
+def wet_bulb_temp(
         ta: Union[npt.NDArray[T], float],
         rh: Union[npt.NDArray[T], float],
 ) -> Union[npt.NDArray[T], float]:
@@ -241,9 +241,6 @@ def twb(
     - Stull, R., 2011. Wet-Bulb Temperature from Relative Humidity and
       Air Temperature. J. Appl. Meteorol. Climatol. 50, 2267-2269.
       https://doi.org/10.1175/JAMC-D-11-0143.1
-
-
-
     """
     ta = np.array(ta)
     rh = np.array(rh)
@@ -258,7 +255,7 @@ def twb(
     if not (ta.size == rh.size):
         raise ValueError('All arrays must have the same length')
 
-    result = thermal_comfort_mod.twb(ta=ta, rh=rh)
+    result = thermal_comfort_mod.wet_bulb_temp(ta=ta, rh=rh)
     # check if we have a single value
     if result.size == 1:
         return result.item()

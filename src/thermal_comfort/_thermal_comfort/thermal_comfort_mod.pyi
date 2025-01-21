@@ -78,7 +78,7 @@ def utci_approx(
     ...
 
 
-def mrt(
+def mean_radiant_temp(
         ta: npt.NDArray[T] | float,
         tg: npt.NDArray[T] | float,
         v: npt.NDArray[T] | float,
@@ -106,7 +106,7 @@ def mrt(
     ...
 
 
-def twb(
+def wet_bulb_temp(
         ta: npt.NDArray[T] | float,
         rh: npt.NDArray[T] | float,
 ) -> npt.NDArray[T]:

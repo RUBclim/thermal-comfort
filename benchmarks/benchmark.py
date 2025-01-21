@@ -23,37 +23,37 @@ def main() -> int:
     # TMRT
     runner.timeit(
         name='tmrt (numpy) scalar',
-        stmt='mrt_np(ta=20, tg=50, v=3)',
-        setup='from thermal_comfort import mrt_np',
+        stmt='mean_radiant_temp_np(ta=20, tg=50, v=3)',
+        setup='from thermal_comfort import mean_radiant_temp_np',
     )
     runner.timeit(
         name='tmrt (numpy) array',
-        stmt='mrt_np(ta=ta, tg=tg, v=v)',
-        setup=f'from thermal_comfort import mrt_np\n{array_setup}',
+        stmt='mean_radiant_temp_np(ta=ta, tg=tg, v=v)',
+        setup=f'from thermal_comfort import mean_radiant_temp_np\n{array_setup}',
     )
     runner.timeit(
         name='tmrt scalar',
-        stmt='mrt(ta=20, tg=50, v=3, d=0.15, e=0.95)',
-        setup='from thermal_comfort import mrt',
+        stmt='mean_radiant_temp(ta=20, tg=50, v=3, d=0.15, e=0.95)',
+        setup='from thermal_comfort import mean_radiant_temp',
     )
 
     runner.timeit(
         name='tmrt array',
-        stmt='mrt(ta=ta, tg=tg, v=v, d=d, e=e)',
-        setup=f'from thermal_comfort import mrt\n{array_setup}',
+        stmt='mean_radiant_temp(ta=ta, tg=tg, v=v, d=d, e=e)',
+        setup=f'from thermal_comfort import mean_radiant_temp\n{array_setup}',
     )
 
     # TWB
     runner.timeit(
         name='twb scalar',
-        stmt='twb(ta=20, rh=50)',
-        setup='from thermal_comfort import twb',
+        stmt='wet_bulb_temp(ta=20, rh=50)',
+        setup='from thermal_comfort import wet_bulb_temp',
     )
 
     runner.timeit(
         name='twb array',
-        stmt='twb(ta=ta, rh=rh)',
-        setup=f'from thermal_comfort import twb\n{array_setup}',
+        stmt='wet_bulb_temp(ta=ta, rh=rh)',
+        setup=f'from thermal_comfort import wet_bulb_temp\n{array_setup}',
     )
 
     # Heat Index

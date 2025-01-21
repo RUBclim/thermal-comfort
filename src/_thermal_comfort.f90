@@ -145,8 +145,8 @@ MODULE thermal_comfort_mod
 
    PUBLIC pet_static
    PUBLIC UTCI_approx
-   PUBLIC mrt
-   PUBLIC twb
+   PUBLIC mean_radiant_temp
+   PUBLIC wet_bulb_temp
    public heat_index
    PUBLIC heat_index_extended
    PUBLIC sat_vap_press_water
@@ -886,10 +886,10 @@ CONTAINS
       END DO
    END
 
-   FUNCTION mrt(ta, tg, v, d, e)
+   FUNCTION mean_radiant_temp(ta, tg, v, d, e)
       IMPLICIT NONE
       REAL(kind=8), INTENT(IN) :: tg(:), v(:), ta(:), d(:), e(:)
-      REAL(kind=8) :: mrt(size(tg))
+      REAL(kind=8) :: mean_radiant_temp(size(tg))
       REAL(kind=8) :: hcg_natural, hcg_forced
       INTEGER :: i
 
@@ -899,22 +899,24 @@ CONTAINS
          hcg_forced = (6.3*((v(i)**0.6)/(d(i)**0.4)))
          IF (hcg_natural > hcg_forced) THEN
             ! natural convection
-            mrt(i) = ((((tg(i) + 273)**4) + ((0.25*10)**8/e(i))*((ABS(tg(i) - ta(i))/d(i))**0.25)*(tg(i) - ta(i)))**0.25) - 273
+            mean_radiant_temp(i) = ((((tg(i) + 273)**4) + ((0.25*10)**8/e(i))* &
+                                     ((ABS(tg(i) - ta(i))/d(i))**0.25)*(tg(i) - ta(i)))**0.25) - 273
          ELSE
             ! forced convection
-            mrt(i) = ((((tg(i) + 273)**4) + (((1.1*(10**8))*v(i)**0.6)/(e(i)*(d(i)**0.4)))*(tg(i) - ta(i)))**0.25) - 273
+            mean_radiant_temp(i) = ((((tg(i) + 273)**4) + (((1.1*(10**8))*v(i)**0.6)/ &
+                                                           (e(i)*(d(i)**0.4)))*(tg(i) - ta(i)))**0.25) - 273
          END IF
       END DO
-   END FUNCTION mrt
+   END FUNCTION mean_radiant_temp
 
-   FUNCTION twb(ta, rh)
+   FUNCTION wet_bulb_temp(ta, rh)
       IMPLICIT NONE
       REAL(kind=8), INTENT(IN) :: ta(:), rh(:)
-      REAL(kind=8) :: twb(size(ta))
-      twb = ta*atan(0.151977*(rh + 8.313659)**0.5) + &
-            atan(ta + rh) - atan(rh - 1.676331) + 0.00391838* &
-            (rh)**1.5*atan(0.023101*rh) - 4.686035
-   END FUNCTION twb
+      REAL(kind=8) :: wet_bulb_temp(size(ta))
+      wet_bulb_temp = ta*atan(0.151977*(rh + 8.313659)**0.5) + &
+                      atan(ta + rh) - atan(rh - 1.676331) + 0.00391838* &
+                      (rh)**1.5*atan(0.023101*rh) - 4.686035
+   END FUNCTION wet_bulb_temp
 
    FUNCTION heat_index(ta, rh)
       ! https://www.weather.gov/ama/heatindex
