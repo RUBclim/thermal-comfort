@@ -80,6 +80,43 @@ def main() -> int:
         stmt='heat_index_extended(ta=ta, rh=rh)',
         setup=f'from thermal_comfort import heat_index_extended\n{array_setup}',
     )
+    # dew point
+    runner.timeit(
+        name='dew point scalar',
+        stmt='dew_point(ta=20, rh=50)',
+        setup='from thermal_comfort import dew_point',
+    )
+
+    runner.timeit(
+        name='dew point array',
+        stmt='dew_point(ta=ta, rh=rh)',
+        setup=f'from thermal_comfort import dew_point\n{array_setup}',
+    )
+
+    # absolute humidity
+    runner.timeit(
+        name='absolute humidity scalar',
+        stmt='absolute_humidity(ta=20, rh=50)',
+        setup='from thermal_comfort import absolute_humidity',
+    )
+
+    runner.timeit(
+        name='absolute humidity array',
+        stmt='absolute_humidity(ta=ta, rh=rh)',
+        setup=f'from thermal_comfort import absolute_humidity\n{array_setup}',
+    )
+    # specific humidity
+    runner.timeit(
+        name='specific humidity scalar',
+        stmt='specific_humidity(ta=20, rh=50)',
+        setup='from thermal_comfort import specific_humidity',
+    )
+
+    runner.timeit(
+        name='specific humidity array',
+        stmt='specific_humidity(ta=ta, rh=rh)',
+        setup=f'from thermal_comfort import specific_humidity\n{array_setup}',
+    )
 
     # UTCI
     runner.timeit(

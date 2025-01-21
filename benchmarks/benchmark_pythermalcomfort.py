@@ -39,6 +39,17 @@ def main() -> int:
         stmt='heat_index(tdb=ta, rh=rh)',
         setup=f'from pythermalcomfort.models import heat_index\n{array_setup}',
     )
+    # dew point
+    runner.timeit(
+        name='dew point scalar',
+        stmt='dew_point_tmp(tdb=20, rh=50)',
+        setup='from pythermalcomfort.utilities import dew_point_tmp',
+    )
+    runner.timeit(
+        name='dew point array',
+        stmt='dew_point_tmp(tdb=ta, rh=rh)',
+        setup=f'from pythermalcomfort.utilities import dew_point_tmp\n{array_setup}',
+    )
 
     # UTCI
     runner.timeit(
