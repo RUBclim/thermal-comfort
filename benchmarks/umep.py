@@ -2,6 +2,7 @@
 from collections import namedtuple
 
 import numpy as np
+from numba import njit
 
 PET_person = namedtuple('PET_person', 'mbody age height activity sex clo')
 
@@ -59,6 +60,7 @@ def calculate_PET_index_vec(Ta, Pa, Tmrt, va, pet):
     pet_index = _PET(Ta, Pa, Tmrt, va, mbody, age, height, activity, clo, sex)
 
 
+@njit
 def _PET(ta, RH, tmrt, v, mbody, age, ht, work, icl, sex):
     """
     Args:
