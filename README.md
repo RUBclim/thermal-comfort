@@ -250,13 +250,25 @@ using an array of length 100,000 the following results were found:
 
 ### comparing to umep
 
-| Benchmark      |   umep   | pythermalcomfort ([bf9febd][1]) |     thermal-comfort      | thermal-comfort (unsafe) | thermal-comfort (Open MPI) | thermal-comfort (unsafe & Open MPI) |
-| -------------- | :------: | :-----------------------------: | :----------------------: | :----------------------: | :------------------------: | :---------------------------------: |
-| utci scalar    | 44.5 us  |      59.5 us: 1.34x slower      |  22.7 us: 1.96x faster   |  2.23 us: 19.97x faster  |   26.0 us: 1.72x faster    |       4.45 us: 10.00x faster        |
-| utci array     | 6.87 sec |     37.1 ms: 185.23x faster     | 5.93 ms: 1157.28x faster | 11.4 ms: 602.16x faster  |  3.82 ms: 1798.79x faster  |      1.24 ms: 5526.68x faster       |
-| pet scalar     |  388 us  |     6.04 ms: 15.56x slower      |  5.86 us: 66.29x faster  |  6.73 us: 57.69x faster  |   8.68 us: 44.74x faster   |       6.56 us: 59.26x faster        |
-| pet array      | 62.6 sec |      189 sec: 3.02x slower      |  284 ms: 220.43x faster  |  804 ms: 77.82x faster   |   117 ms: 533.95x faster   |       113 ms: 553.15x faster        |
-| Geometric mean |  (ref)   |          2.07x faster           |      53.17x faster       |      88.52x faster       |       51.68x faster        |           148.51x faster            |
+| Benchmark      |   umep   |      umep (`njit`)      | pythermalcomfort ([bf9febd][1]) |     thermal-comfort      | thermal-comfort (unsafe) | thermal-comfort (Open MPI) | thermal-comfort (unsafe & Open MPI) |
+| -------------- | :------: | :---------------------: | :-----------------------------: | :----------------------: | :----------------------: | :------------------------: | :---------------------------------: |
+| utci scalar    | 44.5 us  |  6.56 us: 6.79x faster  |      59.5 us: 1.34x slower      |  22.7 us: 1.96x faster   |  2.23 us: 19.97x faster  |   26.0 us: 1.72x faster    |       4.45 us: 10.00x faster        |
+| utci array     | 6.87 sec |  313 ms: 21.95x faster  |     37.1 ms: 185.23x faster     | 5.93 ms: 1157.28x faster | 11.4 ms: 602.16x faster  |  3.82 ms: 1798.79x faster  |      1.24 ms: 5526.68x faster       |
+| pet scalar     |  388 us  | 3.17 us: 122.51x faster |     6.04 ms: 15.56x slower      |  5.86 us: 66.29x faster  |  6.73 us: 57.69x faster  |   8.68 us: 44.74x faster   |       6.56 us: 59.26x faster        |
+| pet array      | 62.6 sec | 1.33 sec: 48.25x faster |      189 sec: 3.02x slower      |  284 ms: 220.43x faster  |  804 ms: 77.82x faster   |   117 ms: 533.95x faster   |       113 ms: 553.15x faster        |
+| Geometric mean |  (ref)   |      35.61x faster      |          2.07x faster           |      53.17x faster       |      88.52x faster       |       51.68x faster        |           148.51x faster            |
+
+While `njit` already gives a huge performance boost, the difference between umep
+(`njit`) and thermal-comfort increases for larger arrays e.g. 1,000,000 values as shown
+here:
+
+| Benchmark      | umep_1mio |  thermalcomfort_1mio   |
+| -------------- | :-------: | :--------------------: |
+| utci scalar    |  6.53 us  | 22.9 us: 3.51x slower  |
+| utci array     | 3.09 sec  | 48.5 ms: 63.77x faster |
+| pet scalar     |  3.15 us  | 5.84 us: 1.85x slower  |
+| pet array      | 13.3 sec  | 2.80 sec: 4.75x faster |
+| Geometric mean |   (ref)   |      2.61x faster      |
 
 > [!CAUTION]
 > If you're after the last bit of performance and don't care about input
