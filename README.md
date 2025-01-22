@@ -18,8 +18,7 @@ via ssh
 pip install git+ssh://git@github.com/RUBclim/thermal-comfort
 ```
 
-> [!NOTE]
-> For this to work, you will have to have `git` and `gfortran` installed
+> [!NOTE] For this to work, you will have to have `git` and `gfortran` installed
 
 For every release, pre-compiled ABI-3 wheels are provided under
 [releases](https://github.com/RUBclim/thermal-comfort/releases)
@@ -262,13 +261,13 @@ While `njit` already gives a huge performance boost, the difference between umep
 (`njit`) and thermal-comfort increases for larger arrays e.g. 1,000,000 values as shown
 here:
 
-| Benchmark      | umep_1mio |  thermalcomfort_1mio   |
-| -------------- | :-------: | :--------------------: |
-| utci scalar    |  6.53 us  | 22.9 us: 3.51x slower  |
-| utci array     | 3.09 sec  | 48.5 ms: 63.77x faster |
-| pet scalar     |  3.15 us  | 5.84 us: 1.85x slower  |
-| pet array      | 13.3 sec  | 2.80 sec: 4.75x faster |
-| Geometric mean |   (ref)   |      2.61x faster      |
+| Benchmark      | umep (`njit`) |    thermal-comfort     |
+| -------------- | :-----------: | :--------------------: |
+| utci scalar    |    6.53 us    | 22.9 us: 3.51x slower  |
+| utci array     |   3.09 sec    | 48.5 ms: 63.77x faster |
+| pet scalar     |    3.15 us    | 5.84 us: 1.85x slower  |
+| pet array      |   13.3 sec    | 2.80 sec: 4.75x faster |
+| Geometric mean |     (ref)     |      2.61x faster      |
 
 > [!CAUTION]
 > If you're after the last bit of performance and don't care about input
