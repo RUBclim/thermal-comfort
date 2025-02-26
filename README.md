@@ -18,7 +18,8 @@ via ssh
 pip install git+ssh://git@github.com/RUBclim/thermal-comfort
 ```
 
-> [!NOTE] For this to work, you will have to have `git` and `gfortran` installed
+> [!NOTE]
+> For this to work, you will have to have `git` and `gfortran` installed
 
 For every release, pre-compiled ABI-3 wheels are provided under
 [releases](https://github.com/RUBclim/thermal-comfort/releases)
