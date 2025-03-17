@@ -1,4 +1,5 @@
 import warnings
+from collections.abc import Iterable
 from typing import overload
 from typing import TypeVar
 from typing import Union
@@ -23,6 +24,15 @@ def utci_approx(
 
 @overload
 def utci_approx(
+        ta: Iterable[float],
+        tmrt: Iterable[float],
+        v: Iterable[float],
+        rh: Iterable[float],
+) -> npt.NDArray[T]: ...
+
+
+@overload
+def utci_approx(
         ta: npt.NDArray[T],
         tmrt: npt.NDArray[T],
         v: npt.NDArray[T],
@@ -32,10 +42,10 @@ def utci_approx(
 
 
 def utci_approx(
-        ta: Union[npt.NDArray[T], float],
-        tmrt: Union[npt.NDArray[T], float],
-        v: Union[npt.NDArray[T], float],
-        rh: Union[npt.NDArray[T], float],
+        ta: Union[npt.NDArray[T], float, Iterable[float]],
+        tmrt: Union[npt.NDArray[T], float, Iterable[float]],
+        v: Union[npt.NDArray[T], float, Iterable[float]],
+        rh: Union[npt.NDArray[T], float, Iterable[float]],
 ) -> Union[npt.NDArray[T], float]:
     """Calculate the Universal Thermal Climate Index (UTCI).
 
@@ -131,6 +141,16 @@ def pet_static(
 
 @overload
 def pet_static(
+        ta: Iterable[float],
+        tmrt: Iterable[float],
+        v: Iterable[float],
+        rh: Iterable[float],
+        p: Iterable[float],
+) -> npt.NDArray[T]: ...
+
+
+@overload
+def pet_static(
         ta: npt.NDArray[T],
         tmrt: npt.NDArray[T],
         v: npt.NDArray[T],
@@ -141,11 +161,11 @@ def pet_static(
 
 
 def pet_static(
-        ta: Union[npt.NDArray[T], float],
-        tmrt: Union[npt.NDArray[T], float],
-        v: Union[npt.NDArray[T], float],
-        rh: Union[npt.NDArray[T], float],
-        p: Union[npt.NDArray[T], float],
+        ta: Union[npt.NDArray[T], float, Iterable[float]],
+        tmrt: Union[npt.NDArray[T], float, Iterable[float]],
+        v: Union[npt.NDArray[T], float, Iterable[float]],
+        rh: Union[npt.NDArray[T], float, Iterable[float]],
+        p: Union[npt.NDArray[T], float, Iterable[float]],
 ) -> Union[npt.NDArray[T], float]:
     """Calculate the Physiological Equivalent Temperature (PET).
 
@@ -226,6 +246,13 @@ def heat_index(ta: float, rh: float) -> float: ...
 
 @overload
 def heat_index(
+        ta: Iterable[float],
+        rh: Iterable[float],
+) -> npt.NDArray[T]: ...
+
+
+@overload
+def heat_index(
         ta: npt.NDArray[T],
         rh: npt.NDArray[T],
 ) -> npt.NDArray[T]: ...
@@ -233,8 +260,8 @@ def heat_index(
 
 
 def heat_index(
-        ta: Union[npt.NDArray[T], float],
-        rh: Union[npt.NDArray[T], float],
+        ta: Union[npt.NDArray[T], float, Iterable[float]],
+        rh: Union[npt.NDArray[T], float, Iterable[float]],
 ) -> Union[npt.NDArray[T], float]:
     r"""Calculate the heat index follwing Steadman R.G (1979) & Rothfusz L.P (1990).
 
@@ -292,6 +319,13 @@ def heat_index_extended(ta: float, rh: float) -> float: ...
 
 @overload
 def heat_index_extended(
+        ta: Iterable[float],
+        rh: Iterable[float],
+) -> npt.NDArray[T]: ...
+
+
+@overload
+def heat_index_extended(
         ta: npt.NDArray[T],
         rh: npt.NDArray[T],
 ) -> npt.NDArray[T]: ...
@@ -299,8 +333,8 @@ def heat_index_extended(
 
 
 def heat_index_extended(
-        ta: Union[npt.NDArray[T], float],
-        rh: Union[npt.NDArray[T], float],
+        ta: Union[npt.NDArray[T], float, Iterable[float]],
+        rh: Union[npt.NDArray[T], float, Iterable[float]],
 ) -> Union[npt.NDArray[T], float]:
     """Calculate the heat index following Steadman R.G (1979) & Rothfusz L.P (1990),
     but extends the range following The National Weather Service Weather Prediction
