@@ -899,7 +899,7 @@ CONTAINS
          hcg_forced = (6.3*((v(i)**0.6)/(d(i)**0.4)))
          IF (hcg_natural > hcg_forced) THEN
             ! natural convection
-            mean_radiant_temp(i) = ((((tg(i) + 273)**4) + ((0.25*10)**8/e(i))* &
+            mean_radiant_temp(i) = ((((tg(i) + 273)**4) + (0.25*(10**8)/e(i))* &
                                      ((ABS(tg(i) - ta(i))/d(i))**0.25)*(tg(i) - ta(i)))**0.25) - 273
          ELSE
             ! forced convection

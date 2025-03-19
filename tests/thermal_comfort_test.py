@@ -368,7 +368,7 @@ def test_pet_static_array_sizes_differ():
         # here since there is no rounding done
         pytest.param(30, 55, 0.3, 0.15, 74.4, id='forced convection'),
         pytest.param(30, 53.2, 0.3, 0.1, 74.6, id='globe diameter 0.1'),
-        pytest.param(30, 55, 0.1, 0.15, 55.0, id='natural convection'),
+        pytest.param(30, 55, 0.1, 0.15, 70.6, id='natural convection'),
     ),
 )
 def test_tmrt_scalar_values(ta, tg, v, d, expected):
@@ -381,7 +381,7 @@ def test_tmrt_array_values_default_d_e():
     tg = np.array([55, 53.2, 55])
     v = np.array([0.3, 0.3, 0.1])
     ta = np.array([30, 30, 30])
-    expected = np.array([74.4, 71.6, 55.0])
+    expected = np.array([74.4, 71.6, 70.6])
     assert pytest.approx(mean_radiant_temp(ta=ta, tg=tg, v=v), abs=1e-1) == expected
 
 
@@ -391,7 +391,7 @@ def test_tmrt_array_values():
     ta = np.array([30, 30, 30])
     d = np.array([0.15, 0.1, 0.15])
     e = np.array([0.95, 0.95, 0.95])
-    expected = np.array([74.4, 74.6, 55.0])
+    expected = np.array([74.4, 74.6, 70.6])
     assert_array_almost_equal(
         mean_radiant_temp(ta=ta, tg=tg, v=v, d=d, e=e),
         expected,
