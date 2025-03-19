@@ -6,7 +6,6 @@ from thermal_comfort.models import utci_approx
 from thermal_comfort.utils import absolute_humidity
 from thermal_comfort.utils import dew_point
 from thermal_comfort.utils import mean_radiant_temp
-from thermal_comfort.utils import mean_radiant_temp_np
 from thermal_comfort.utils import sat_vap_press_ice
 from thermal_comfort.utils import sat_vap_press_water
 from thermal_comfort.utils import specific_humidity
@@ -29,7 +28,7 @@ _specific_humidity = thermal_comfort_mod.specific_humidity
 
 __all__ = [
     'utci_approx', '_utci_approx', 'pet_static',
-    '_pet_static', 'mean_radiant_temp_np', 'mean_radiant_temp', '_mean_radiant_temp',
+    '_pet_static', 'mean_radiant_temp', '_mean_radiant_temp',
     'wet_bulb_temp', '_wet_bulb_temp', 'heat_index', '_heat_index',
     'heat_index_extended', '_heat_index_extended', 'sat_vap_press_water',
     '_sat_vap_press_water', 'sat_vap_press_ice', '_sat_vap_press_ice',
