@@ -10,7 +10,6 @@ from thermal_comfort import dew_point
 from thermal_comfort import heat_index
 from thermal_comfort import heat_index_extended
 from thermal_comfort import mean_radiant_temp
-from thermal_comfort import mean_radiant_temp_np
 from thermal_comfort import pet_static
 from thermal_comfort import sat_vap_press_ice
 from thermal_comfort import sat_vap_press_water
@@ -361,7 +360,6 @@ def test_pet_static_array_sizes_differ():
     assert excinfo.value.args[0] == 'All arrays must have the same length'
 
 
-@pytest.mark.parametrize('f', [mean_radiant_temp, mean_radiant_temp_np])
 @pytest.mark.parametrize(
     ('ta', 'tg', 'v', 'd', 'expected'),
     (
@@ -373,21 +371,21 @@ def test_pet_static_array_sizes_differ():
         pytest.param(30, 55, 0.1, 0.15, 55.0, id='natural convection'),
     ),
 )
-def test_tmrt_scalar_values(ta, tg, v, d, expected, f):
-    assert pytest.approx(f(ta=ta, tg=tg, v=v, d=d, e=0.95), abs=1e-1) == expected
+def test_tmrt_scalar_values(ta, tg, v, d, expected):
+    assert pytest.approx(
+        mean_radiant_temp(ta=ta, tg=tg, v=v, d=d, e=0.95), abs=1e-1,
+    ) == expected
 
 
-@pytest.mark.parametrize('f', [mean_radiant_temp, mean_radiant_temp_np])
-def test_tmrt_array_values_default_d_e(f):
+def test_tmrt_array_values_default_d_e():
     tg = np.array([55, 53.2, 55])
     v = np.array([0.3, 0.3, 0.1])
     ta = np.array([30, 30, 30])
     expected = np.array([74.4, 71.6, 55.0])
-    assert pytest.approx(f(ta=ta, tg=tg, v=v), abs=1e-1) == expected
+    assert pytest.approx(mean_radiant_temp(ta=ta, tg=tg, v=v), abs=1e-1) == expected
 
 
-@pytest.mark.parametrize('f', [mean_radiant_temp, mean_radiant_temp_np])
-def test_tmrt_array_values(f):
+def test_tmrt_array_values():
     tg = np.array([55, 53.2, 55])
     v = np.array([0.3, 0.3, 0.1])
     ta = np.array([30, 30, 30])
@@ -395,26 +393,24 @@ def test_tmrt_array_values(f):
     e = np.array([0.95, 0.95, 0.95])
     expected = np.array([74.4, 74.6, 55.0])
     assert_array_almost_equal(
-        f(ta=ta, tg=tg, v=v, d=d, e=e),
+        mean_radiant_temp(ta=ta, tg=tg, v=v, d=d, e=e),
         expected,
         decimal=1,
     )
 
 
-@pytest.mark.parametrize('f', [mean_radiant_temp, mean_radiant_temp_np])
 @pytest.mark.parametrize('d', (0, -0.01, -100.5))
-def test_mrt_d_outside_of_allowed_range(f, d):
+def test_mrt_d_outside_of_allowed_range(d):
     with pytest.raises(ValueError) as excinfo:
-        f(ta=20, tg=70, v=3, d=d)
+        mean_radiant_temp(ta=20, tg=70, v=3, d=d)
 
     assert excinfo.value.args[0] == 'The globe diameter (d) must be positive'
 
 
-@pytest.mark.parametrize('f', [mean_radiant_temp, mean_radiant_temp_np])
 @pytest.mark.parametrize('e', (-0.01, 1.1))
-def test_mrt_e_outside_of_allowed_range(f, e):
+def test_mrt_e_outside_of_allowed_range(e):
     with pytest.raises(ValueError) as excinfo:
-        f(ta=20, tg=70, v=3, e=e)
+        mean_radiant_temp(ta=20, tg=70, v=3, e=e)
 
     assert excinfo.value.args[0] == 'The emissivity (e) must be between 0 and 1'
 
@@ -774,4 +770,19 @@ def test_specific_humidity_array_values_custom_p():
         specific_humidity(ta=ta, rh=rh, p=p),
         expected,
         decimal=1,
+    )
+
+
+def test_specific_humidity_array_values_custom_p_dataframe():
+    df = pd.DataFrame({
+        'rh': pd.Series([30, 50, 70]),
+        'ta': pd.Series([10, 20, 30]),
+        'p': pd.Series([980.5, 1010.3, 1013.15]),
+    })
+    df['result'] = specific_humidity(ta=df['ta'], rh=df['rh'], p=df['p'])
+    assert_series_equal(
+        left=df['result'],
+        right=pd.Series([2.3, 7.2, 18.4]),
+        atol=1,
+        check_names=False,
     )

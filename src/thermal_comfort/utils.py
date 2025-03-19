@@ -1,3 +1,4 @@
+from collections.abc import Iterable
 from typing import overload
 from typing import TypeVar
 from typing import Union
@@ -9,121 +10,6 @@ from ._thermal_comfort import thermal_comfort_mod
 
 
 T = TypeVar('T', bound=Union[np.floating, np.integer])
-
-
-def _tmrt_forced_convection(
-        ta: Union[npt.NDArray[T], float],
-        tg: Union[npt.NDArray[T], float],
-        v: Union[npt.NDArray[T], float],
-        d: Union[npt.NDArray[T], float],
-        e: Union[npt.NDArray[T], float],
-) -> Union[npt.NDArray[T], np.floating]:
-    """Calculate the mean radiant temperature based on DIN EN ISO 7726 for forced
-    convection.
-
-    :param ta: air temperature in °C
-    :param tg: black globe temperature in °C
-    :param v: air velocity in m/s
-    :param d: diameter of the black globe in m
-    :param e: emissivity of the black globe
-
-    :returns: returns the mean radiant temperature for forced convection in °C
-    """
-    return (
-        np.power(
-            (
-                (np.power((tg + 273), 4)) +
-                (
-                    ((1.1 * np.power(10, 8)) * np.power(v, 0.6)) /
-                    (e * np.power(d, 0.4))
-                ) * (tg - ta)
-            ), 0.25,
-        )
-    ) - 273
-
-
-def _tmrt_natural_convection(
-        ta: Union[npt.NDArray[T], float],
-        tg: Union[npt.NDArray[T], float],
-        d: Union[npt.NDArray[T], float],
-        e: Union[npt.NDArray[T], float],
-) -> Union[npt.NDArray[T], np.floating]:
-    """Calculate the mean radiant temperature based on DIN EN ISO 7726 for natural
-    convection.
-
-    :param ta: air temperature in °C
-    :param tg: black globe temperature in °C
-    :param d: diameter of the black globe in m
-    :param e: emissivity of the black globe
-
-    :returns: returns the mean radiant temperature for natural convection in °C
-    """
-    return (
-        np.power(
-            ((np.power(tg + 273, 4)) + (np.power(0.25*10, 8)/e) *
-             (np.power((np.abs(tg - ta)/d), 0.25))*(tg - ta)),
-            0.25,
-        )
-    ) - 273
-
-
-def mean_radiant_temp_np(
-        ta: Union[npt.NDArray[T], float],
-        tg: Union[npt.NDArray[T], float],
-        v: Union[npt.NDArray[T], float],
-        d: Union[npt.NDArray[T], float] = 0.15,
-        e: Union[npt.NDArray[T], float] = 0.95,
-) -> Union[npt.NDArray[T], np.floating]:
-    """Calculate the mean radiant temperature based on DIN EN ISO 7726.
-
-    Based on the air velocity, this function will decide whether to use the
-    natural or forced convection.
-
-    Calculate hcg (the coefficient of heat transfer) for both natural and forced
-    convection. Check which one is higher and use that (defined in Section B.2.3)
-
-    This function performs better for smaller arrays. For larger arrays, the
-    fortran-based function outperforms this function.
-
-    :param ta: air temperature in °C
-    :param tg: black globe temperature in °C
-    :param v: air velocity in m/s
-    :param d: diameter of the black globe in m (default 0.15 m)
-    :param e: emissivity of the black globe (default 0.95)
-
-    :returns: returns the mean radiant temperature in °C
-    """
-    tg = np.asarray(tg)
-    v = np.asarray(v)
-    ta = np.asarray(ta)
-    # when we use the default, we need to reshape the arrays
-    if isinstance(d, float):
-        d = np.full_like(tg, d, dtype=float)
-    if isinstance(e, float):
-        e = np.full_like(tg, e, dtype=float)
-
-    # check for value ranges
-    if np.any(d <= 0):
-        raise ValueError('The globe diameter (d) must be positive')
-
-    if np.any((e < 0) | (e > 1)):
-        raise ValueError('The emissivity (e) must be between 0 and 1')
-
-    # we need to mask the values and apply the correct function to these values
-    hcg_natural = np.power(1.4 * (np.abs(tg - ta) / 0.15), 0.25)
-    hcg_forced = (6.3 * (np.power(v, 0.6) / np.power(d, 0.4)))
-
-    mask = hcg_natural > hcg_forced
-    output = np.zeros(shape=mask.shape)
-    # apply the natural convection cases
-    output[mask] = _tmrt_natural_convection(
-        tg=tg[mask], ta=ta[mask], d=d[mask], e=e[mask],
-    )
-    # apply the forced convection cases
-    output[~mask] = _tmrt_forced_convection(
-        tg=tg[~mask], ta=ta[~mask], v=v[~mask], d=d[~mask], e=e[~mask],
-    )
-    return output
 
 
 # autopep8: off
@@ -139,6 +25,16 @@ def mean_radiant_temp(
 
 @overload
 def mean_radiant_temp(
+        ta: Iterable[float],
+        tg: Iterable[float],
+        v: Iterable[float],
+        d: Union[Iterable[float], float] = 0.15,
+        e: Union[Iterable[float], float] = 0.95,
+) -> npt.NDArray[T]: ...
+
+
+@overload
+def mean_radiant_temp(
         ta: npt.NDArray[T],
         tg: npt.NDArray[T],
         v: npt.NDArray[T],
@@ -149,11 +45,11 @@ def mean_radiant_temp(
 
 
 def mean_radiant_temp(
-        ta: Union[npt.NDArray[T], float],
-        tg: Union[npt.NDArray[T], float],
-        v: Union[npt.NDArray[T], float],
-        d: Union[npt.NDArray[T], float] = 0.15,
-        e: Union[npt.NDArray[T], float] = 0.95,
+        ta: Union[npt.NDArray[T], float, Iterable[float]],
+        tg: Union[npt.NDArray[T], float, Iterable[float]],
+        v: Union[npt.NDArray[T], float, Iterable[float]],
+        d: Union[npt.NDArray[T], float, Iterable[float]] = 0.15,
+        e: Union[npt.NDArray[T], float, Iterable[float]] = 0.95,
 ) -> Union[npt.NDArray[T], float]:
     """
     Calculate the mean radiant temperature based on DIN EN ISO 7726.
@@ -226,6 +122,13 @@ def wet_bulb_temp(
 
 @overload
 def wet_bulb_temp(
+        ta: Iterable[float],
+        rh: Iterable[float],
+) -> npt.NDArray[T]: ...
+
+
+@overload
+def wet_bulb_temp(
         ta: npt.NDArray[T],
         rh: npt.NDArray[T],
 ) -> npt.NDArray[T]: ...
@@ -233,8 +136,8 @@ def wet_bulb_temp(
 
 
 def wet_bulb_temp(
-        ta: Union[npt.NDArray[T], float],
-        rh: Union[npt.NDArray[T], float],
+        ta: Union[npt.NDArray[T], float, Iterable[float]],
+        rh: Union[npt.NDArray[T], float, Iterable[float]],
 ) -> Union[npt.NDArray[T], float]:
     """Calculate the wet bulb temperature following the Stull (2011) equation
 
@@ -276,12 +179,16 @@ def sat_vap_press_water(ta: float) -> float: ...
 
 
 @overload
+def sat_vap_press_water(ta: Iterable[float]) -> npt.NDArray[T]: ...
+
+
+@overload
 def sat_vap_press_water(ta: npt.NDArray[T]) -> npt.NDArray[T]: ...
 # autopep8: on
 
 
 def sat_vap_press_water(
-        ta: Union[npt.NDArray[T], float],
+        ta: Union[npt.NDArray[T], float, Iterable[float]],
 ) -> Union[npt.NDArray[T], float]:
     """Calculate the saturation vapor pressure **over water** following the
     equation in VDI 3786 sheet 04.
@@ -326,11 +233,17 @@ def sat_vap_press_ice(ta: float) -> float: ...
 
 
 @overload
+def sat_vap_press_ice(ta: Iterable[float]) -> npt.NDArray[T]: ...
+
+
+@overload
 def sat_vap_press_ice(ta: npt.NDArray[T]) -> npt.NDArray[T]: ...
 # autopep8: on
 
 
-def sat_vap_press_ice(ta: Union[npt.NDArray[T], float]) -> Union[npt.NDArray[T], float]:
+def sat_vap_press_ice(
+        ta: Union[npt.NDArray[T], float, Iterable[float]],
+) -> Union[npt.NDArray[T], float]:
     """Calculate the saturation vapor pressure **over ice** following the
     equation in VDI 3786 sheet 04.
 
@@ -378,6 +291,13 @@ def dew_point(
 
 @overload
 def dew_point(
+        ta: Iterable[float],
+        rh: Iterable[float],
+) -> npt.NDArray[T]: ...
+
+
+@overload
+def dew_point(
         ta: npt.NDArray[T],
         rh: npt.NDArray[T],
 ) -> npt.NDArray[T]: ...
@@ -385,8 +305,8 @@ def dew_point(
 
 
 def dew_point(
-        ta: Union[npt.NDArray[T], float],
-        rh: Union[npt.NDArray[T], float],
+        ta: Union[npt.NDArray[T], float, Iterable[float]],
+        rh: Union[npt.NDArray[T], float, Iterable[float]],
 ) -> Union[npt.NDArray[T], float]:
     """Calculate the dew point following the equation in VDI 3786 sheet 04.
 
@@ -441,6 +361,13 @@ def absolute_humidity(
 
 @overload
 def absolute_humidity(
+        ta: Iterable[float],
+        rh: Iterable[float],
+) -> npt.NDArray[T]: ...
+
+
+@overload
+def absolute_humidity(
         ta: npt.NDArray[T],
         rh: npt.NDArray[T],
 ) -> npt.NDArray[T]: ...
@@ -448,8 +375,8 @@ def absolute_humidity(
 
 
 def absolute_humidity(
-        ta: Union[npt.NDArray[T], float],
-        rh: Union[npt.NDArray[T], float],
+        ta: Union[npt.NDArray[T], float, Iterable[float]],
+        rh: Union[npt.NDArray[T], float, Iterable[float]],
 ) -> Union[npt.NDArray[T], float]:
     """Calculate the absolute humidity above water following the equation in
     VDI 3786 sheet 04.
@@ -494,6 +421,14 @@ def specific_humidity(
 
 @overload
 def specific_humidity(
+        ta: Iterable[float],
+        rh: Iterable[float],
+        p: Union[Iterable[float], float] = 1013.25,
+) -> npt.NDArray[T]: ...
+
+
+@overload
+def specific_humidity(
         ta: npt.NDArray[T],
         rh: npt.NDArray[T],
         p: Union[npt.NDArray[T], float] = 1013.25,
@@ -502,9 +437,9 @@ def specific_humidity(
 
 
 def specific_humidity(
-        ta: Union[npt.NDArray[T], float],
-        rh: Union[npt.NDArray[T], float],
-        p: Union[npt.NDArray[T], float] = 1013.25,
+        ta: Union[npt.NDArray[T], float, Iterable[float]],
+        rh: Union[npt.NDArray[T], float, Iterable[float]],
+        p: Union[npt.NDArray[T], float, Iterable[float]] = 1013.25,
 ) -> Union[npt.NDArray[T], float]:
     """Calculate the specific humidity above water following the equation in
     VDI 3786 sheet 04.
