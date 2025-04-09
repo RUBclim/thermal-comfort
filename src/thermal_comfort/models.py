@@ -228,7 +228,7 @@ def pet_static(
             'Please reshape your array accordingly',
         )
     # 2. check for same length
-    if not (ta.size == rh.size == v.size == tmrt.size):
+    if not (ta.size == rh.size == v.size == tmrt.size == p.size):
         raise ValueError('All arrays must have the same length')
 
     result = thermal_comfort_mod.pet_static(ta=ta, rh=rh, v=v, tmrt=tmrt, p=p)

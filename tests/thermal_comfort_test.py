@@ -203,6 +203,23 @@ def test_utci_approx_array_sizes_differ():
     assert excinfo.value.args[0] == 'All arrays must have the same length'
 
 
+@pytest.mark.parametrize(
+    'constant', ('ta', 'tmrt', 'v', 'rh'),
+)
+def test_utci_approx_array_sizes_differ_one_constant_supplied(constant):
+    values = {
+        'ta': np.array([20.5, 20.5]),
+        'tmrt': np.array([50.5, 70.5]),
+        'v': np.array([1.5, 2.5]),
+        'rh': np.array([50.5, 60.5]),
+    }
+    values[constant] = 123  # type: ignore[assignment]
+    with pytest.raises(ValueError) as excinfo:
+        utci_approx(**values)
+
+    assert excinfo.value.args[0] == 'All arrays must have the same length'
+
+
 def _rh(vpa, ta):
     """we changed the interface of pet to use relative humidity instead of
     vapour pressure, hence we need to calculate the relative humidity from
@@ -361,6 +378,24 @@ def test_pet_static_array_sizes_differ():
 
 
 @pytest.mark.parametrize(
+    'constant', ('ta', 'tmrt', 'v', 'rh', 'p'),
+)
+def test_pet_static_array_sizes_differ_one_constant_supplied(constant):
+    values = {
+        'ta': np.array([20.5, 20.5]),
+        'tmrt': np.array([50.5, 70.5]),
+        'v': np.array([1.5, 2.5]),
+        'rh': np.array([50.5, 60.5]),
+        'p': np.array([1013.5, 1010.5]),
+    }
+    values[constant] = 123  # type: ignore[assignment]
+    with pytest.raises(ValueError) as excinfo:
+        pet_static(**values)
+
+    assert excinfo.value.args[0] == 'All arrays must have the same length'
+
+
+@pytest.mark.parametrize(
     ('ta', 'tg', 'v', 'd', 'expected'),
     (
         # the first two cases are example from DIN EN ISO 7726, however
@@ -435,6 +470,22 @@ def test_mrt_array_sizes_differ():
     v = np.array([1.5, 2.5])
     with pytest.raises(ValueError) as excinfo:
         mean_radiant_temp(tg=tg, v=v, ta=ta)
+
+    assert excinfo.value.args[0] == 'All arrays must have the same length'
+
+
+@pytest.mark.parametrize(
+    'constant', ('tg', 'ta', 'v'),
+)
+def test_mrt_array_sizes_differ_one_constant_supplied(constant):
+    values = {
+        'tg': np.array([20.5, 20.5]),
+        'ta': np.array([50.5, 70.5]),
+        'v': np.array([1.5, 2.5]),
+    }
+    values[constant] = 123  # type: ignore[assignment]
+    with pytest.raises(ValueError) as excinfo:
+        mean_radiant_temp(**values)
 
     assert excinfo.value.args[0] == 'All arrays must have the same length'
 
