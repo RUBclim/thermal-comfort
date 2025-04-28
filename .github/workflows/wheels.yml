@@ -2,7 +2,7 @@ name: wheels
 
 on:
   push:
-    branches: [main]
+    branches: [windows-wheels]
   workflow_dispatch:
 
 jobs:
@@ -13,10 +13,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
-            py: "cp39*"
-          # - os: windows-latest
+          # - os: ubuntu-latest
           #   py: "cp39*"
+          - os: windows-latest
+            py: "cp39*"
           # - os: macos-latest
           #   name: macos-x86_64
           #   macos_arch: "x86_64"
@@ -35,8 +35,22 @@ jobs:
         with:
           platforms: aarch64
 
+      - uses: fortran-lang/setup-fortran@v1
+        id: setup-fortran
+        with:
+          compiler: gcc
+
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
+        timeout-minutes: 60
+        with:
+          limit-access-to-actor: true
+
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.22.0
+        env:
+          CIBW_CONFIG_SETTINGS_WINDOWS: cmake.args="-GNinja"
+
 
       - uses: actions/upload-artifact@v4
         with:
