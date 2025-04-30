@@ -6,6 +6,12 @@
 
 ## Installation
 
+via pypi
+
+```bash
+pip install thermal-comfort
+```
+
 via https
 
 ```bash
