@@ -11,7 +11,7 @@ set(CMAKE_Fortran_FLAGS
 )
 find_package(
   Python
-  COMPONENTS Interpreter Development.Module NumPy ${SKBUILD_SABI_COMPONENT}
+  COMPONENTS Interpreter Development.Module NumPy
   REQUIRED)
 
 # F2PY headers
@@ -36,22 +36,13 @@ add_custom_command(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/${ModuleName}.f90" -m "${ModuleName}"
     --lower)
 
-if(NOT "${SKBUILD_SABI_COMPONENT}" STREQUAL "")
-  python_add_library(
+python_add_library(
     ${ModuleName}
     MODULE
     "${CMAKE_CURRENT_BINARY_DIR}/${ModuleName}module.c"
     "${CMAKE_CURRENT_BINARY_DIR}/${ModuleName}-f2pywrappers2.f90"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/${ModuleName}.f90"
-    WITH_SOABI
-    USE_SABI
-    3.7)
-else()
-  python_add_library(
-    ${ModuleName} MODULE "${CMAKE_CURRENT_BINARY_DIR}/${ModuleName}module.c"
-    "${CMAKE_CURRENT_BINARY_DIR}/${ModuleName}-f2pywrappers2.f90"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/${ModuleName}.f90" WITH_SOABI)
-endif()
+    WITH_SOABI)
 
 target_link_libraries("${ModuleName}" PRIVATE fortranobject)
 
