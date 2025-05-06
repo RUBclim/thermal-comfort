@@ -2,26 +2,21 @@
 [![wheels](https://github.com/RUBclim/thermal-comfort/actions/workflows/wheels.yml/badge.svg)](https://github.com/RUBclim/thermal-comfort/actions/workflows/wheels.yml)
 [![pre-commit](https://github.com/RUBclim/thermal-comfort/actions/workflows/pre-commit.yaml/badge.svg)](https://github.com/RUBclim/thermal-comfort/actions/workflows/pre-commit.yaml)
 
-# thermal-comfort
+# thermal-comfort-omp
+
+This version is compiled with OpenMPI support. For single core processing use
+[`thermal-comfort`](https://pypi.org/project/thermal-comfort/) instead.
+
+You can set the environment variable `OMP_NUM_CORES=<number of cores>` to control how
+many cores are used by the package. Using too many cores can lead to degraded
+performance.
 
 ## Installation
 
 via pypi
 
 ```bash
-pip install thermal-comfort
-```
-
-via https
-
-```bash
-pip install git+https://github.com/RUBclim/thermal-comfort
-```
-
-via ssh
-
-```bash
-pip install git+ssh://git@github.com/RUBclim/thermal-comfort
+pip install thermal-comfort-omp
 ```
 
 > [!NOTE]
