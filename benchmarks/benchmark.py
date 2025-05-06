@@ -22,16 +22,6 @@ def main() -> int:
     runner = pyperf.Runner()
     # TMRT
     runner.timeit(
-        name='tmrt (numpy) scalar',
-        stmt='mean_radiant_temp_np(ta=20, tg=50, v=3)',
-        setup='from thermal_comfort import mean_radiant_temp_np',
-    )
-    runner.timeit(
-        name='tmrt (numpy) array',
-        stmt='mean_radiant_temp_np(ta=ta, tg=tg, v=v)',
-        setup=f'from thermal_comfort import mean_radiant_temp_np\n{array_setup}',
-    )
-    runner.timeit(
         name='tmrt scalar',
         stmt='mean_radiant_temp(ta=20, tg=50, v=3, d=0.15, e=0.95)',
         setup='from thermal_comfort import mean_radiant_temp',
