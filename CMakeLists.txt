@@ -4,10 +4,18 @@ project(
   LANGUAGES C Fortran
   VERSION ${SKBUILD_PROJECT_VERSION})
 
+option(USE_OPENMP "Enable OpenMP support" OFF)
+
 set(ModuleName "_thermal_comfort")
+if(USE_OPENMP)
+  set(OMP_FLAG "-fopenmp")
+else()
+  set(OMP_FLAG "")
+endif()
+
 # we can add -ffast-math if we do the checking for NaNs in python
 set(CMAKE_Fortran_FLAGS
-    "${CMAKE_Fortran_FLAGS} -Ofast -Wall -march=native -ftree-vectorize -funroll-loops -funsafe-math-optimizations"
+    "${CMAKE_Fortran_FLAGS} -Ofast -Wall -march=native -ftree-vectorize -funroll-loops -funsafe-math-optimizations ${OMP_FLAG}"
 )
 find_package(
   Python

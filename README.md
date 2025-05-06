@@ -283,5 +283,10 @@ here:
 > all your arrays have the same length otherwise undefined behavior may happen. For
 > performance reasons this package is not compiled using `-fcheck=bounds` compiler-flag.
 
+## Compilation
+
+You can set the cmake flag `-DUSE_OPENMP=1` to compile the package with
+[OpenMP support](https://www.openmp.org/wp-content/uploads/F95_OpenMPv1_v2.pdf)
+
 [1]:
   https://github.com/CenterForTheBuiltEnvironment/pythermalcomfort/commit/bf9febdfb6244fff0fd9805c0ed1b41820504696
