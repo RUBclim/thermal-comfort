@@ -15,7 +15,7 @@ endif()
 
 # we can add -ffast-math if we do the checking for NaNs in python
 set(CMAKE_Fortran_FLAGS
-    "${CMAKE_Fortran_FLAGS} -Ofast -Wall -march=native -ftree-vectorize -funroll-loops -funsafe-math-optimizations ${OMP_FLAG}"
+    "${CMAKE_Fortran_FLAGS} -Ofast -Wall -ftree-vectorize -funroll-loops -funsafe-math-optimizations ${OMP_FLAG}"
 )
 find_package(
   Python
