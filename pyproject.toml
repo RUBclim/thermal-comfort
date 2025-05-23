@@ -4,8 +4,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "thermal-comfort-omp"
-version = "1.1.1"
-
+version = "1.1.2"
 dependencies = [
     "numpy>=2.0.0"
 ]
