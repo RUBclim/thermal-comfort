@@ -231,6 +231,13 @@ def pet_static(
     if not (ta.size == rh.size == v.size == tmrt.size == p.size):
         raise ValueError('All arrays must have the same length')
 
+    # 3. check for value ranges
+    # negative wind speeds never converge
+    if np.any(v[v != None] < 0):  # noqa: E711
+        raise ValueError(
+            'All values for v must be >= 0. Negative wind speeds are not allowed.',
+        )
+
     result = thermal_comfort_mod.pet_static(ta=ta, rh=rh, v=v, tmrt=tmrt, p=p)
     # check if we have a single value
     if result.size == 1:
