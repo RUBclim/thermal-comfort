@@ -395,6 +395,15 @@ def test_pet_static_array_sizes_differ_one_constant_supplied(constant):
     assert excinfo.value.args[0] == 'All arrays must have the same length'
 
 
+def test_pet_static_negative_wind_speed_values():
+    with pytest.raises(ValueError) as excinfo:
+        pet_static(ta=20, tmrt=30, v=-0.1, rh=50, p=1013.25)
+
+    assert excinfo.value.args[0] == (
+        'All values for v must be >= 0. Negative wind speeds are not allowed.'
+    )
+
+
 @pytest.mark.parametrize(
     ('ta', 'tg', 'v', 'd', 'expected'),
     (
